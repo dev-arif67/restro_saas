@@ -1,0 +1,203 @@
+import axios from 'axios';
+import { useAuthStore } from '../stores/authStore';
+
+const api = axios.create({
+    baseURL: '/api',
+    headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+    },
+});
+
+// Request interceptor - attach token
+api.interceptors.request.use(
+    (config) => {
+        const token = useAuthStore.getState().token;
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
+
+// Response interceptor - handle auth errors
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            useAuthStore.getState().logout();
+            window.location.href = '/login';
+        }
+
+        if (error.response?.status === 402) {
+            // Subscription expired
+            window.location.href = '/dashboard/settings?subscription=expired';
+        }
+
+        return Promise.reject(error);
+    }
+);
+
+export default api;
+
+// ==================== API Service Functions ====================
+
+// Auth
+export const authAPI = {
+    login: (data) => api.post('/auth/login', data),
+    register: (data) => api.post('/auth/register', data),
+    me: () => api.get('/auth/me'),
+    logout: () => api.post('/auth/logout'),
+    refresh: () => api.post('/auth/refresh'),
+};
+
+// Dashboard
+export const dashboardAPI = {
+    get: () => api.get('/dashboard'),
+};
+
+// Menu Items
+export const menuAPI = {
+    list: (params) => api.get('/menu-items', { params }),
+    create: (data) => api.post('/menu-items', data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+    show: (id) => api.get(`/menu-items/${id}`),
+    update: (id, data) => {
+        data.append('_method', 'PUT');
+        return api.post(`/menu-items/${id}`, data, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+    },
+    delete: (id) => api.delete(`/menu-items/${id}`),
+    toggle: (id) => api.patch(`/menu-items/${id}/toggle`),
+    restore: (id) => api.post(`/menu-items/${id}/restore`),
+};
+
+// Categories
+export const categoryAPI = {
+    list: (params) => api.get('/categories', { params }),
+    create: (data) => api.post('/categories', data),
+    update: (id, data) => api.put(`/categories/${id}`, data),
+    delete: (id) => api.delete(`/categories/${id}`),
+};
+
+// Tables
+export const tableAPI = {
+    list: (params) => api.get('/tables', { params }),
+    create: (data) => api.post('/tables', data),
+    update: (id, data) => api.put(`/tables/${id}`, data),
+    delete: (id) => api.delete(`/tables/${id}`),
+    transfer: (data) => api.post('/tables/transfer', data),
+    qrCode: (id) => api.get(`/tables/${id}/qr`),
+    parcelQr: () => api.get('/tables/parcel-qr'),
+};
+
+// Vouchers
+export const voucherAPI = {
+    list: (params) => api.get('/vouchers', { params }),
+    create: (data) => api.post('/vouchers', data),
+    update: (id, data) => api.put(`/vouchers/${id}`, data),
+    delete: (id) => api.delete(`/vouchers/${id}`),
+    validate: (data) => api.post('/customer/voucher/validate', data),
+};
+
+// Orders
+export const orderAPI = {
+    list: (params) => api.get('/orders', { params }),
+    show: (id) => api.get(`/orders/${id}`),
+    updateStatus: (id, status) => api.patch(`/orders/${id}/status`, { status }),
+    cancel: (id) => api.post(`/orders/${id}/cancel`),
+    markPaid: (id, data = {}) => api.post(`/orders/${id}/mark-paid`, data),
+    track: (orderNumber) => api.get(`/customer/order/track/${orderNumber}`),
+    invoice: (orderNumber) => api.get(`/customer/order/${orderNumber}/invoice`),
+};
+
+// Kitchen
+export const kitchenAPI = {
+    activeOrders: () => api.get('/kitchen/orders'),
+    ordersByStatus: (status) => api.get(`/kitchen/orders/${status}`),
+    advanceOrder: (id) => api.post(`/kitchen/orders/${id}/advance`),
+    stats: () => api.get('/kitchen/stats'),
+};
+
+// Reports
+export const reportAPI = {
+    sales: (params) => api.get('/reports/sales', { params }),
+    vouchers: (params) => api.get('/reports/vouchers', { params }),
+    tables: (params) => api.get('/reports/tables', { params }),
+    trends: (params) => api.get('/reports/trends', { params }),
+    topItems: (params) => api.get('/reports/top-items', { params }),
+    revenueComparison: () => api.get('/reports/revenue-comparison'),
+    settlements: () => api.get('/reports/settlements'),
+};
+
+// Settlements
+export const settlementAPI = {
+    list: (params) => api.get('/settlements', { params }),
+    show: (id) => api.get(`/settlements/${id}`),
+};
+
+// Users
+export const userAPI = {
+    list: (params) => api.get('/users', { params }),
+    create: (data) => api.post('/users', data),
+    update: (id, data) => api.put(`/users/${id}`, data),
+    delete: (id) => api.delete(`/users/${id}`),
+};
+
+// Subscription
+export const subscriptionAPI = {
+    current: () => api.get('/subscription/current'),
+    pay: (data) => api.post('/subscription/pay', data),
+};
+
+// Branding (restaurant admin)
+export const brandingAPI = {
+    get: () => api.get('/branding'),
+    update: (data) => api.post('/branding', data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+};
+
+// Platform Branding (public + admin)
+export const platformAPI = {
+    branding: () => api.get('/platform/branding'),
+};
+
+// Customer (public)
+export const customerAPI = {
+    restaurant: (slug) => api.get(`/customer/restaurant/${slug}`),
+    menu: (slug) => api.get(`/customer/restaurant/${slug}/menu`),
+    table: (slug, tableId) => api.get(`/customer/restaurant/${slug}/table/${tableId}`),
+    placeOrder: (slug, data) => api.post(`/customer/restaurant/${slug}/order`, data),
+    validateVoucher: (slug, code, subtotal = 0) => api.post('/customer/voucher/validate', { tenant_slug: slug, code, subtotal }),
+};
+
+// Admin
+export const adminAPI = {
+    tenants: {
+        list: (params) => api.get('/admin/tenants', { params }),
+        create: (data) => api.post('/admin/tenants', data),
+        show: (id) => api.get(`/admin/tenants/${id}`),
+        update: (id, data) => api.put(`/admin/tenants/${id}`, data),
+        delete: (id) => api.delete(`/admin/tenants/${id}`),
+        dashboard: () => api.get('/admin/tenants-dashboard'),
+    },
+    subscriptions: {
+        list: (params) => api.get('/admin/subscriptions', { params }),
+        create: (data) => api.post('/admin/subscriptions', data),
+        cancel: (id) => api.post(`/admin/subscriptions/${id}/cancel`),
+    },
+    settlements: {
+        all: (params) => api.get('/admin/all-settlements', { params }),
+        addPayment: (id, data) => api.post(`/admin/settlements/${id}/payment`, data),
+    },
+    settings: {
+        get: () => api.get('/admin/settings'),
+        update: (data) => api.post('/admin/settings', data, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        }),
+    },
+};

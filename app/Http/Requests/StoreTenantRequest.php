@@ -1,0 +1,36 @@
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class StoreTenantRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:tenants,email',
+            'phone' => 'nullable|string|max:20',
+            'address' => 'nullable|string|max:500',
+            'authorized_wifi_ip' => 'nullable|string|max:255',
+            'payment_mode' => 'nullable|in:platform,seller',
+            'commission_rate' => 'nullable|numeric|min:0|max:100',
+            'tax_rate' => 'nullable|numeric|min:0|max:100',
+            // Admin user
+            'admin_name' => 'required|string|max:255',
+            'admin_email' => 'required|email|unique:users,email',
+            'admin_password' => 'required|string|min:8',
+            // Subscription
+            'plan_type' => 'required|in:monthly,yearly,custom',
+            'subscription_amount' => 'required|numeric|min:0',
+            'payment_method' => 'nullable|string',
+            'payment_ref' => 'nullable|string',
+        ];
+    }
+}
