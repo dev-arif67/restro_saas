@@ -28,7 +28,6 @@ use Illuminate\Support\Facades\Route;
 // Authentication
 Route::prefix('auth')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
-    Route::post('register', [AuthController::class, 'register']);
 });
 
 // Platform branding (public, no auth)
@@ -125,9 +124,10 @@ Route::middleware(['auth:api'])->group(function () {
         Route::get('settlements', [SettlementController::class, 'index']);
         Route::get('settlements/{id}', [SettlementController::class, 'show']);
 
-        // Users (restaurant staff management)
+        // Users: view own tenant's users (read-only for restaurant_admin)
         Route::middleware('role:restaurant_admin')->group(function () {
-            Route::apiResource('users', UserController::class);
+            Route::get('users', [UserController::class, 'index']);
+            Route::get('users/{id}', [UserController::class, 'show']);
         });
 
         // Restaurant Branding (restaurant admin)
@@ -156,6 +156,9 @@ Route::middleware(['auth:api'])->group(function () {
         // Subscriptions
         Route::apiResource('subscriptions', SubscriptionController::class)->only(['index', 'store', 'show']);
         Route::post('subscriptions/{id}/cancel', [SubscriptionController::class, 'cancel']);
+
+        // User management (super admin only)
+        Route::apiResource('users', UserController::class);
 
         // Settlements
         Route::get('all-settlements', [SettlementController::class, 'allSettlements']);

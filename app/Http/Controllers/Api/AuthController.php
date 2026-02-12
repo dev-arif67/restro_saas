@@ -37,28 +37,13 @@ class AuthController extends BaseApiController
         return $this->respondWithToken($token);
     }
 
+    /**
+     * Registration is disabled.
+     * Only super admin can create tenants and users via admin routes.
+     */
     public function register(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|min:8|confirmed',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->error('Validation failed', 422, $validator->errors());
-        }
-
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => $request->password,
-            'role' => 'restaurant_admin',
-        ]);
-
-        $token = auth()->login($user);
-
-        return $this->respondWithToken($token, 201);
+        return $this->error('Registration is disabled. Contact the super admin to create an account.', 403);
     }
 
     public function me(): JsonResponse

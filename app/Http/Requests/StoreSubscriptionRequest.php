@@ -8,7 +8,8 @@ class StoreSubscriptionRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        // Only super admin can create subscriptions
+        return $this->user() && $this->user()->isSuperAdmin();
     }
 
     public function rules(): array

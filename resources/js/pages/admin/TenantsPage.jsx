@@ -35,8 +35,20 @@ export default function TenantsPage() {
 
     const handleOnboard = (e) => {
         e.preventDefault();
-        const d = Object.fromEntries(new FormData(e.target));
-        d.commission_rate = parseFloat(d.commission_rate || 5);
+        const formData = Object.fromEntries(new FormData(e.target));
+        const d = {
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone || null,
+            payment_mode: formData.payment_mode,
+            commission_rate: parseFloat(formData.commission_rate || 5),
+            admin_name: formData.admin_name,
+            admin_email: formData.admin_email,
+            admin_password: formData.admin_password,
+            plan_type: formData.plan_type,
+            subscription_amount: parseFloat(formData.subscription_amount || 0),
+            payment_method: formData.payment_method || 'manual',
+        };
         onboardMutation.mutate(d);
     };
 
@@ -114,14 +126,11 @@ export default function TenantsPage() {
                 <form onSubmit={handleOnboard} className="space-y-4">
                     <h4 className="font-medium text-gray-700">Restaurant Info</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div><label className="label">Restaurant Name</label><input name="tenant_name" className="input" required /></div>
-                        <div><label className="label">Slug</label><input name="tenant_slug" className="input" required /></div>
+                        <div><label className="label">Restaurant Name</label><input name="name" className="input" required /></div>
+                        <div><label className="label">Email</label><input name="email" type="email" className="input" required /></div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div><label className="label">Email</label><input name="tenant_email" type="email" className="input" required /></div>
-                        <div><label className="label">Phone</label><input name="tenant_phone" className="input" /></div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div><label className="label">Phone</label><input name="phone" className="input" /></div>
                         <div>
                             <label className="label">Payment Mode</label>
                             <select name="payment_mode" className="input">
@@ -129,8 +138,8 @@ export default function TenantsPage() {
                                 <option value="platform">Platform Collects</option>
                             </select>
                         </div>
-                        <div><label className="label">Commission %</label><input name="commission_rate" type="number" step="0.01" className="input" defaultValue="5" /></div>
                     </div>
+                    <div><label className="label">Commission %</label><input name="commission_rate" type="number" step="0.01" className="input" defaultValue="5" /></div>
 
                     <hr />
                     <h4 className="font-medium text-gray-700">Admin User</h4>
@@ -150,7 +159,7 @@ export default function TenantsPage() {
                                 <option value="yearly">Yearly</option>
                             </select>
                         </div>
-                        <div><label className="label">Amount</label><input name="amount" type="number" className="input" /></div>
+                        <div><label className="label">Amount</label><input name="subscription_amount" type="number" className="input" required /></div>
                     </div>
 
                     <div className="flex gap-3 pt-2">

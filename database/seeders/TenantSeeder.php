@@ -19,8 +19,8 @@ class TenantSeeder extends Seeder
         // Create Super Admin
         User::create([
             'name' => 'Super Admin',
-            'email' => 'admin@restaurantsaas.com',
-            'password' => 'password',
+            'email' => 'admin@mail.com',
+            'password' => '12345678',
             'role' => User::ROLE_SUPER_ADMIN,
             'status' => 'active',
         ]);
@@ -44,7 +44,7 @@ class TenantSeeder extends Seeder
             'tenant_id' => $tenant->id,
             'name' => 'Restaurant Owner',
             'email' => 'owner@demo-restaurant.com',
-            'password' => 'password',
+            'password' => '12345678',
             'role' => User::ROLE_RESTAURANT_ADMIN,
             'status' => 'active',
         ]);
@@ -54,7 +54,7 @@ class TenantSeeder extends Seeder
             'tenant_id' => $tenant->id,
             'name' => 'Waiter Ali',
             'email' => 'waiter@demo-restaurant.com',
-            'password' => 'password',
+            'password' => '12345678',
             'role' => User::ROLE_STAFF,
             'status' => 'active',
         ]);
@@ -64,7 +64,7 @@ class TenantSeeder extends Seeder
             'tenant_id' => $tenant->id,
             'name' => 'Chef Karim',
             'email' => 'kitchen@demo-restaurant.com',
-            'password' => 'password',
+            'password' => '12345678',
             'role' => User::ROLE_KITCHEN,
             'status' => 'active',
         ]);

@@ -8,7 +8,8 @@ class UpdateTenantRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        // Only super admin can update tenants
+        return $this->user() && $this->user()->isSuperAdmin();
     }
 
     public function rules(): array
