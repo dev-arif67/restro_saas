@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, useOutletContext, Link } from 'react-router-dom';
+import { useParams, useOutletContext, Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { customerAPI } from '../../services/api';
 import { useCartStore } from '../../stores/cartStore';
@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 
 export default function CustomerMenuPage() {
     const { slug } = useParams();
+    const [searchParams] = useSearchParams();
     const { restaurant } = useOutletContext() || {};
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [searchText, setSearchText] = useState('');
@@ -108,7 +109,7 @@ export default function CustomerMenuPage() {
             {/* Floating Cart Button */}
             {cartCount > 0 && (
                 <div className="fixed bottom-6 left-4 right-4 max-w-lg mx-auto">
-                    <Link to={`/restaurant/${slug}/cart`}
+                    <Link to={`/restaurant/${slug}/cart?${searchParams.toString()}`}
                        className="flex items-center justify-between bg-blue-600 text-white rounded-2xl py-4 px-6 shadow-lg">
                         <span className="font-medium">{cartCount} items</span>
                         <span className="font-bold text-lg">View Cart</span>

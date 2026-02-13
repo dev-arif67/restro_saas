@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
+import { useParams, useNavigate, useOutletContext, useSearchParams, Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { useCartStore } from '../../stores/cartStore';
 import { customerAPI } from '../../services/api';
@@ -9,6 +9,7 @@ import { HiOutlineCash, HiOutlineCreditCard } from 'react-icons/hi';
 export default function CustomerCartPage() {
     const { slug } = useParams();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { restaurant, tableId } = useOutletContext() || {};
     const { items, addItem, removeItem, updateQty, clearCart, getSubtotal, getOrderPayload } = useCartStore();
     const [voucher, setVoucher] = useState('');
@@ -74,7 +75,7 @@ export default function CustomerCartPage() {
             {items.length === 0 ? (
                 <div className="text-center py-12">
                     <p className="text-gray-400 text-lg">Your cart is empty</p>
-                    <a href={`/restaurant/${slug}`} className="text-blue-600 text-sm mt-2 inline-block">Browse Menu</a>
+                    <Link to={`/restaurant/${slug}?${searchParams.toString()}`} className="text-blue-600 text-sm mt-2 inline-block">Browse Menu</Link>
                 </div>
             ) : (
                 <>
