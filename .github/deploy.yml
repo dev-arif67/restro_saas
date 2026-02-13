@@ -15,7 +15,7 @@ jobs:
         uses: SamKirkland/FTP-Deploy-Action@4.3.0
         with:
           server: ftp.arifhossen.site
-          username:  infyra@infyrasoft.arifhossen.site
+          username: "infyra@infyrasoft.arifhossen.site"
           password: "eK5td3MceESkazzn"
 
 
