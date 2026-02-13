@@ -53,20 +53,22 @@ class TenantController extends BaseApiController
                 'email' => $request->admin_email,
                 'password' => $request->admin_password,
                 'role' => User::ROLE_RESTAURANT_ADMIN,
+                'status' => 'active',
             ]);
 
             // Create subscription
             $planDays = match ($request->plan_type) {
-                'monthly' => 30,
-                'yearly' => 365,
+                'monthly' => config('saas.plans.monthly.duration_days', 30),
+                'yearly' => config('saas.plans.yearly.duration_days', 365),
                 'custom' => $request->custom_days ?? 30,
+                default => 30,
             };
 
-            Subscription::create([
+            Subscription::withoutGlobalScopes()->create([
                 'tenant_id' => $tenant->id,
                 'plan_type' => $request->plan_type,
                 'amount' => $request->subscription_amount,
-                'payment_method' => $request->payment_method,
+                'payment_method' => $request->payment_method ?? 'manual',
                 'payment_ref' => $request->payment_ref,
                 'starts_at' => now(),
                 'expires_at' => now()->addDays($planDays),
@@ -75,7 +77,7 @@ class TenantController extends BaseApiController
 
             return $this->created([
                 'tenant' => $tenant->fresh()->load('activeSubscription'),
-                'admin' => $admin,
+                'admin' => $admin->fresh(),
             ], 'Restaurant onboarded successfully');
         });
     }
@@ -101,12 +103,13 @@ class TenantController extends BaseApiController
             return $this->notFound('Tenant not found');
         }
 
+        $data = $request->validated();
+
         if ($request->hasFile('logo')) {
-            $path = $request->file('logo')->store('tenants/logos', 'public');
-            $request->merge(['logo' => $path]);
+            $data['logo'] = $request->file('logo')->store('tenants/logos', 'public');
         }
 
-        $tenant->update($request->validated());
+        $tenant->update($data);
 
         return $this->success($tenant->fresh(), 'Tenant updated successfully');
     }
@@ -133,7 +136,8 @@ class TenantController extends BaseApiController
                 'total_tenants' => Tenant::count(),
                 'active_tenants' => Tenant::where('is_active', true)->count(),
                 'total_users' => User::count(),
-                'total_revenue' => Subscription::where('status', 'active')->sum('amount'),
+                'total_revenue' => Subscription::withoutGlobalScopes()
+                    ->where('status', 'active')->sum('amount'),
             ]);
         }
 

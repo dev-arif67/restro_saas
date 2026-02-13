@@ -19,18 +19,21 @@ class CheckSubscriptionExpiry implements ShouldQueue
     {
         Log::info('Running subscription expiry check...');
 
-        // Find expired active subscriptions
-        $expired = Subscription::where('status', 'active')
-            ->where('expires_at', '<', now())
+        // Find expired active subscriptions (use today() for date columns)
+        $expired = Subscription::withoutGlobalScopes()
+            ->where('status', 'active')
+            ->where('expires_at', '<', today())
             ->get();
 
         foreach ($expired as $subscription) {
             $subscription->markExpired();
 
             // Check if tenant has any other active subscription
-            $hasActive = Subscription::where('tenant_id', $subscription->tenant_id)
+            $hasActive = Subscription::withoutGlobalScopes()
+                ->where('tenant_id', $subscription->tenant_id)
                 ->where('id', '!=', $subscription->id)
-                ->active()
+                ->where('status', 'active')
+                ->where('expires_at', '>=', today())
                 ->exists();
 
             if (!$hasActive) {
