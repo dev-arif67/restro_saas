@@ -8,20 +8,33 @@ class StoreUserRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // Only super admin can create users (enforced by route middleware too)
-        return $this->user() && $this->user()->isSuperAdmin();
+        // Super admin or restaurant admin can create users
+        return $this->user() && (
+            $this->user()->isSuperAdmin() || $this->user()->isRestaurantAdmin()
+        );
     }
 
     public function rules(): array
     {
-        return [
-            'tenant_id' => 'required|exists:tenants,id',
+        $user = $this->user();
+
+        // Super admin must provide tenant_id; restaurant admin's tenant is auto-assigned
+        $rules = [
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8',
-            'role' => 'required|in:restaurant_admin,staff,kitchen',
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:500',
         ];
+
+        if ($user->isSuperAdmin()) {
+            $rules['tenant_id'] = 'required|exists:tenants,id';
+            $rules['role'] = 'required|in:restaurant_admin,staff,kitchen';
+        } else {
+            // Restaurant admin can only create staff or kitchen users
+            $rules['role'] = 'required|in:staff,kitchen';
+        }
+
+        return $rules;
     }
 }

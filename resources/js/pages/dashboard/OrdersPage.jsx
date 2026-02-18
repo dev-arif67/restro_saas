@@ -6,9 +6,16 @@ import StatusBadge from '../../components/ui/StatusBadge';
 import Modal from '../../components/ui/Modal';
 import POSInvoice from '../../components/POSInvoice';
 import toast from 'react-hot-toast';
-import { HiOutlineCash, HiOutlineCreditCard, HiOutlineDocumentText, HiOutlineCheckCircle } from 'react-icons/hi';
+import { HiOutlineCash, HiOutlineCreditCard, HiOutlineDeviceMobile, HiOutlineDocumentText, HiOutlineCheckCircle, HiOutlineDesktopComputer } from 'react-icons/hi';
 
 const STATUS_OPTIONS = ['placed', 'confirmed', 'preparing', 'ready', 'served', 'completed', 'cancelled'];
+
+const PAYMENT_METHOD_MAP = {
+    cash: { label: 'Cash', icon: HiOutlineCash },
+    card: { label: 'Card', icon: HiOutlineCreditCard },
+    mobile_banking: { label: 'mBanking', icon: HiOutlineDeviceMobile },
+    online: { label: 'Online', icon: HiOutlineCreditCard },
+};
 
 const PaymentBadge = ({ status }) => {
     const colors = {
@@ -106,18 +113,26 @@ export default function OrdersPage() {
                                 <div className="flex items-center gap-2 flex-wrap">
                                     <span className="font-bold">{order.order_number}</span>
                                     <StatusBadge status={order.status} />
-                                    <span className="text-xs text-gray-400 capitalize">{order.type}</span>
+                                    <span className="text-xs text-gray-400 capitalize">{order.type === 'quick' ? 'Quick Sale' : order.type}</span>
+                                    {order.source === 'pos' && (
+                                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-100 text-indigo-700">
+                                            <HiOutlineDesktopComputer className="w-3 h-3" /> POS
+                                        </span>
+                                    )}
                                 </div>
                                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                                     <p className="text-sm text-gray-500 truncate">
-                                        {order.table?.table_number || order.customer_name || 'Walk-in'} &middot; {order.items?.length || 0} items
+                                        {order.table?.table_number ? `Table ${order.table.table_number}` : order.customer_name || 'Walk-in'} &middot; {order.items?.length || 0} items
                                     </p>
-                                    {order.payment_method && (
-                                        <span className="inline-flex items-center text-xs text-gray-400">
-                                            {order.payment_method === 'cash' ? <HiOutlineCash className="w-3.5 h-3.5 mr-0.5" /> : <HiOutlineCreditCard className="w-3.5 h-3.5 mr-0.5" />}
-                                            {order.payment_method === 'cash' ? 'Cash' : 'Online'}
-                                        </span>
-                                    )}
+                                    {order.payment_method && (() => {
+                                        const pm = PAYMENT_METHOD_MAP[order.payment_method] || { label: order.payment_method, icon: HiOutlineCash };
+                                        return (
+                                            <span className="inline-flex items-center text-xs text-gray-400">
+                                                <pm.icon className="w-3.5 h-3.5 mr-0.5" />
+                                                {pm.label}
+                                            </span>
+                                        );
+                                    })()}
                                     {order.payment_status && <PaymentBadge status={order.payment_status} />}
                                 </div>
                             </div>
@@ -145,15 +160,20 @@ export default function OrdersPage() {
                         <div className="bg-gray-50 rounded-lg p-3 flex items-center justify-between flex-wrap gap-2">
                             <div className="flex items-center gap-3">
                                 <div className="flex items-center gap-1.5 text-sm">
-                                    {viewOrder.payment_method === 'cash' ? (
-                                        <><HiOutlineCash className="w-5 h-5 text-green-600" /> <span>Cash (Counter)</span></>
-                                    ) : viewOrder.payment_method === 'online' ? (
-                                        <><HiOutlineCreditCard className="w-5 h-5 text-blue-600" /> <span>Online{viewOrder.payment_gateway ? ` (${viewOrder.payment_gateway})` : ''}</span></>
-                                    ) : (
-                                        <span className="text-gray-400">No payment method</span>
-                                    )}
+                                    {(() => {
+                                        const pm = PAYMENT_METHOD_MAP[viewOrder.payment_method];
+                                        if (pm) {
+                                            return <><pm.icon className="w-5 h-5 text-blue-600" /> <span>{pm.label}{viewOrder.payment_gateway ? ` (${viewOrder.payment_gateway})` : ''}</span></>;
+                                        }
+                                        return <span className="text-gray-400">No payment method</span>;
+                                    })()}
                                 </div>
                                 <PaymentBadge status={viewOrder.payment_status} />
+                                {viewOrder.source === 'pos' && (
+                                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-100 text-indigo-700">
+                                        <HiOutlineDesktopComputer className="w-3 h-3" /> POS
+                                    </span>
+                                )}
                             </div>
                             <div className="flex items-center gap-2">
                                 {viewOrder.payment_status !== 'paid' && (

@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\KitchenController;
 use App\Http\Controllers\Api\MenuItemController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PlatformSettingController;
+use App\Http\Controllers\Api\PosOrderController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SettlementController;
 use App\Http\Controllers\Api\SubscriptionController;
@@ -101,6 +102,11 @@ Route::middleware(['auth:api'])->group(function () {
         Route::post('orders/{id}/cancel', [OrderController::class, 'cancel']);
         Route::post('orders/{id}/mark-paid', [OrderController::class, 'markPaid']);
 
+        // POS Terminal (staff + admin order creation)
+        Route::middleware('role:restaurant_admin,staff')->group(function () {
+            Route::post('pos/orders', [PosOrderController::class, 'store']);
+        });
+
         // Kitchen
         Route::prefix('kitchen')->group(function () {
             Route::get('orders', [KitchenController::class, 'activeOrders']);
@@ -124,10 +130,13 @@ Route::middleware(['auth:api'])->group(function () {
         Route::get('settlements', [SettlementController::class, 'index']);
         Route::get('settlements/{id}', [SettlementController::class, 'show']);
 
-        // Users: view own tenant's users (read-only for restaurant_admin)
+        // Users: restaurant admin can manage own tenant's staff/kitchen users
         Route::middleware('role:restaurant_admin')->group(function () {
             Route::get('users', [UserController::class, 'index']);
+            Route::post('users', [UserController::class, 'store']);
             Route::get('users/{id}', [UserController::class, 'show']);
+            Route::put('users/{id}', [UserController::class, 'update']);
+            Route::delete('users/{id}', [UserController::class, 'destroy']);
         });
 
         // Restaurant Branding (restaurant admin)
@@ -186,48 +195,8 @@ Route::get('/optimize:clear', function () {
 });
 
 Route::get('/storage-link', function () {
-    $target = storage_path('app/public');
-    $link = public_path('storage');
-
-    // Remove existing link/directory if it exists
-    if (is_link($link)) {
-        unlink($link);
-    } elseif (is_dir($link)) {
-        rmdir($link);
-    }
-
-    // Try symlink first, fall back to manual copy approach for cPanel
-    try {
-        symlink($target, $link);
-        return response()->json(['message' => 'Storage symlink created', 'target' => $target, 'link' => $link]);
-    } catch (\Exception $e) {
-        // cPanel fallback: create directory and copy files
-        if (!is_dir($link)) {
-            mkdir($link, 0755, true);
-        }
-
-        // Recursively copy storage/app/public to public/storage
-        $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($target, \RecursiveDirectoryIterator::SKIP_DOTS),
-            \RecursiveIteratorIterator::SELF_FIRST
-        );
-
-        foreach ($iterator as $item) {
-            $dest = $link . DIRECTORY_SEPARATOR . $iterator->getSubPathname();
-            if ($item->isDir()) {
-                if (!is_dir($dest)) mkdir($dest, 0755, true);
-            } else {
-                copy($item, $dest);
-            }
-        }
-
-        return response()->json([
-            'message' => 'Storage files copied (symlink not supported)',
-            'target' => $target,
-            'link' => $link,
-            'note' => 'Files were copied instead of symlinked. Re-run after uploading new files.',
-        ]);
-    }
+    Artisan::call('storage:link');
+    return response()->json(['message' => 'Storage linked']);
 });
 
 Route::get('/migrate', function () {

@@ -175,6 +175,11 @@ export const customerAPI = {
     validateVoucher: (slug, code, subtotal = 0) => api.post('/customer/voucher/validate', { tenant_slug: slug, code, subtotal }),
 };
 
+// POS Terminal
+export const posAPI = {
+    createOrder: (data) => api.post('/pos/orders', data),
+};
+
 // Admin
 export const adminAPI = {
     tenants: {

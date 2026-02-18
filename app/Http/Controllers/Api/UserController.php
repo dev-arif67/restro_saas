@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\StoreUserRequest;
+use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -45,12 +46,40 @@ class UserController extends BaseApiController
     }
 
     /**
-     * Create user (super admin only — enforced by route middleware).
-     * Super admin must provide tenant_id.
+     * Create user.
+     * - Super admin: must provide tenant_id, can create any role
+     * - Restaurant admin: auto-assigns own tenant_id, can create staff/kitchen only
+     * Enforces max_users limit set by super admin on the tenant.
      */
     public function store(StoreUserRequest $request): JsonResponse
     {
-        $user = User::create($request->validated());
+        $authUser = auth()->user();
+        $data = $request->validated();
+
+        // Auto-assign tenant_id for restaurant admin
+        if ($authUser->isRestaurantAdmin()) {
+            $data['tenant_id'] = $authUser->tenant_id;
+        }
+
+        // Enforce user limit
+        $tenant = Tenant::find($data['tenant_id']);
+
+        if (!$tenant) {
+            return $this->error('Tenant not found', 404);
+        }
+
+        $currentUserCount = User::where('tenant_id', $tenant->id)
+            ->where('status', 'active')
+            ->count();
+
+        if ($currentUserCount >= $tenant->max_users) {
+            return $this->error(
+                "User limit reached. This restaurant can have a maximum of {$tenant->max_users} users. Contact the platform admin to increase the limit.",
+                422
+            );
+        }
+
+        $user = User::create($data);
 
         return $this->created($user->load('tenant:id,name'), 'User created');
     }
@@ -72,25 +101,44 @@ class UserController extends BaseApiController
     }
 
     /**
-     * Update user (super admin only — enforced by route middleware).
+     * Update user.
+     * - Super admin: can update any user
+     * - Restaurant admin: can update own tenant's staff/kitchen users only
      */
     public function update(Request $request, int $id): JsonResponse
     {
-        $user = User::find($id);
+        $authUser = auth()->user();
+        $user = $this->resolveUser($id);
 
         if (!$user) {
             return $this->notFound('User not found');
         }
 
-        $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'email' => "sometimes|email|unique:users,email,{$id}",
-            'password' => 'sometimes|string|min:8',
-            'role' => 'sometimes|in:restaurant_admin,staff,kitchen',
-            'phone' => 'nullable|string|max:20',
-            'status' => 'sometimes|in:active,inactive',
-            'tenant_id' => 'sometimes|exists:tenants,id',
-        ]);
+        // Restaurant admin cannot update other restaurant admins or super admins
+        if ($authUser->isRestaurantAdmin()) {
+            if ($user->isSuperAdmin() || ($user->isRestaurantAdmin() && $user->id !== $authUser->id)) {
+                return $this->forbidden('You can only update your own profile or staff/kitchen users');
+            }
+
+            $validated = $request->validate([
+                'name' => 'sometimes|string|max:255',
+                'email' => "sometimes|email|unique:users,email,{$id}",
+                'password' => 'sometimes|string|min:8',
+                'role' => 'sometimes|in:staff,kitchen',
+                'phone' => 'nullable|string|max:20',
+                'status' => 'sometimes|in:active,inactive',
+            ]);
+        } else {
+            $validated = $request->validate([
+                'name' => 'sometimes|string|max:255',
+                'email' => "sometimes|email|unique:users,email,{$id}",
+                'password' => 'sometimes|string|min:8',
+                'role' => 'sometimes|in:restaurant_admin,staff,kitchen',
+                'phone' => 'nullable|string|max:20',
+                'status' => 'sometimes|in:active,inactive',
+                'tenant_id' => 'sometimes|exists:tenants,id',
+            ]);
+        }
 
         $user->update($validated);
 
@@ -98,11 +146,14 @@ class UserController extends BaseApiController
     }
 
     /**
-     * Deactivate user (super admin only — enforced by route middleware).
+     * Deactivate user.
+     * - Super admin: can deactivate any non-super-admin user
+     * - Restaurant admin: can deactivate own tenant's staff/kitchen users
      */
     public function destroy(int $id): JsonResponse
     {
-        $user = User::find($id);
+        $authUser = auth()->user();
+        $user = $this->resolveUser($id);
 
         if (!$user) {
             return $this->notFound('User not found');
@@ -114,6 +165,11 @@ class UserController extends BaseApiController
 
         if ($user->isSuperAdmin()) {
             return $this->error('Cannot deactivate a super admin', 422);
+        }
+
+        // Restaurant admin cannot deactivate other restaurant admins
+        if ($authUser->isRestaurantAdmin() && $user->isRestaurantAdmin()) {
+            return $this->error('Cannot deactivate another admin', 422);
         }
 
         $user->update(['status' => 'inactive']);

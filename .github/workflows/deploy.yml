@@ -2,7 +2,7 @@ name: Deploy project to our server
 on:
   push:
     branches:
-      - main
+      - deploy
 jobs:
   FTP-Deploy-Action:
     name: FTP-Deploy-Action
