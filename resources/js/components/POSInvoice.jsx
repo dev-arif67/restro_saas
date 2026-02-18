@@ -54,7 +54,13 @@ export default function POSInvoice({ order, restaurant, onClose }) {
     if (!order) return null;
 
     const isPaid = order.payment_status === 'paid';
-    const paymentLabel = order.payment_method === 'cash' ? 'Pay at Counter' : 'Online Payment';
+    const paymentLabelMap = {
+        cash: 'Cash',
+        card: 'Card / POS',
+        mobile_banking: 'Mobile Banking',
+        online: 'Online',
+    };
+    const paymentLabel = paymentLabelMap[order.payment_method] ?? order.payment_method;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
@@ -167,8 +173,8 @@ export default function POSInvoice({ order, restaurant, onClose }) {
                                 style={{
                                     display: 'inline-block', padding: '2px 8px', borderRadius: '4px',
                                     fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase',
-                                    background: order.payment_method === 'cash' ? '#e0f2fe' : '#f3e8ff',
-                                    color: order.payment_method === 'cash' ? '#075985' : '#6b21a8',
+                                    background: order.payment_method === 'cash' ? '#e0f2fe' : order.payment_method === 'card' ? '#ede9fe' : '#f0fdf4',
+                                    color: order.payment_method === 'cash' ? '#075985' : order.payment_method === 'card' ? '#5b21b6' : '#166534',
                                 }}>
                                 {paymentLabel}
                             </span>

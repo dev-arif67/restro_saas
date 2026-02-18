@@ -26,6 +26,7 @@ class UpdateTenantRequest extends FormRequest
             'payment_mode' => 'nullable|in:platform,seller',
             'commission_rate' => 'nullable|numeric|min:0|max:100',
             'tax_rate' => 'nullable|numeric|min:0|max:100',
+            'max_users' => 'nullable|integer|min:1|max:999',
         ];
     }
 }

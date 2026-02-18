@@ -23,6 +23,9 @@ const SettlementsPage = lazy(() => import('./pages/dashboard/SettlementsPage'));
 const UsersPage = lazy(() => import('./pages/dashboard/UsersPage'));
 const SettingsPage = lazy(() => import('./pages/dashboard/SettingsPage'));
 
+// POS
+const POSPage = lazy(() => import('./pages/dashboard/POSPage'));
+
 // Kitchen
 const KitchenDisplayPage = lazy(() => import('./pages/kitchen/KitchenDisplayPage'));
 
@@ -77,6 +80,11 @@ export default function App() {
                     <Route path="settlements" element={<SettlementsPage />} />
                     <Route path="users" element={<UsersPage />} />
                     <Route path="settings" element={<SettingsPage />} />
+                    <Route path="pos" element={
+                        <ProtectedRoute roles={['restaurant_admin', 'staff']}>
+                            <POSPage />
+                        </ProtectedRoute>
+                    } />
                     {/* Admin routes */}
                     <Route path="tenants" element={<TenantsPage />} />
                     <Route path="subscriptions" element={<SubscriptionsPage />} />

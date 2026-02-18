@@ -44,6 +44,7 @@ class TenantController extends BaseApiController
                 'payment_mode' => $request->payment_mode ?? 'seller',
                 'commission_rate' => $request->commission_rate ?? 0,
                 'tax_rate' => $request->tax_rate ?? 0,
+                'max_users' => $request->max_users ?? 5,
             ]);
 
             // Create admin user for tenant

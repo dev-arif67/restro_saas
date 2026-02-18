@@ -1,0 +1,353 @@
+{
+  "_Modal-DG5C7CFd.js": {
+    "file": "assets/Modal-DG5C7CFd.js",
+    "name": "Modal",
+    "imports": [
+      "index.html"
+    ]
+  },
+  "_POSInvoice-0SuoJ50S.js": {
+    "file": "assets/POSInvoice-0SuoJ50S.js",
+    "name": "POSInvoice",
+    "imports": [
+      "index.html",
+      "_index-DXY5cShP.js"
+    ]
+  },
+  "_PoweredBy-CVbRoZwM.js": {
+    "file": "assets/PoweredBy-CVbRoZwM.js",
+    "name": "PoweredBy",
+    "imports": [
+      "index.html"
+    ]
+  },
+  "_StatusBadge-DtDva7gu.js": {
+    "file": "assets/StatusBadge-DtDva7gu.js",
+    "name": "StatusBadge",
+    "imports": [
+      "index.html"
+    ]
+  },
+  "_cartStore-BzO2gdoy.js": {
+    "file": "assets/cartStore-BzO2gdoy.js",
+    "name": "cartStore",
+    "imports": [
+      "index.html"
+    ]
+  },
+  "_index-DXY5cShP.js": {
+    "file": "assets/index-DXY5cShP.js",
+    "name": "index",
+    "imports": [
+      "index.html"
+    ]
+  },
+  "_useMutation-C8vzS0_Q.js": {
+    "file": "assets/useMutation-C8vzS0_Q.js",
+    "name": "useMutation",
+    "imports": [
+      "index.html"
+    ]
+  },
+  "_useQuery-Rt3S72ZS.js": {
+    "file": "assets/useQuery-Rt3S72ZS.js",
+    "name": "useQuery",
+    "imports": [
+      "index.html"
+    ]
+  },
+  "index.html": {
+    "file": "assets/index-VcNFqetI.js",
+    "name": "index",
+    "src": "index.html",
+    "isEntry": true,
+    "dynamicImports": [
+      "layouts/DashboardLayout.jsx",
+      "layouts/CustomerLayout.jsx",
+      "pages/auth/LoginPage.jsx",
+      "pages/auth/RegisterPage.jsx",
+      "pages/dashboard/DashboardPage.jsx",
+      "pages/dashboard/MenuItemsPage.jsx",
+      "pages/dashboard/CategoriesPage.jsx",
+      "pages/dashboard/TablesPage.jsx",
+      "pages/dashboard/OrdersPage.jsx",
+      "pages/dashboard/VouchersPage.jsx",
+      "pages/dashboard/ReportsPage.jsx",
+      "pages/dashboard/SettlementsPage.jsx",
+      "pages/dashboard/UsersPage.jsx",
+      "pages/dashboard/SettingsPage.jsx",
+      "pages/dashboard/POSPage.jsx",
+      "pages/kitchen/KitchenDisplayPage.jsx",
+      "pages/customer/CustomerMenuPage.jsx",
+      "pages/customer/CustomerCartPage.jsx",
+      "pages/customer/OrderTrackingPage.jsx",
+      "pages/admin/TenantsPage.jsx",
+      "pages/admin/SubscriptionsPage.jsx",
+      "pages/admin/AdminSettingsPage.jsx"
+    ],
+    "css": [
+      "assets/index-DFR-xMlt.css"
+    ]
+  },
+  "layouts/CustomerLayout.jsx": {
+    "file": "assets/CustomerLayout-DkMw3-XO.js",
+    "name": "CustomerLayout",
+    "src": "layouts/CustomerLayout.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_useQuery-Rt3S72ZS.js",
+      "_cartStore-BzO2gdoy.js",
+      "_PoweredBy-CVbRoZwM.js"
+    ]
+  },
+  "layouts/DashboardLayout.jsx": {
+    "file": "assets/DashboardLayout-Bl3rsIo8.js",
+    "name": "DashboardLayout",
+    "src": "layouts/DashboardLayout.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_PoweredBy-CVbRoZwM.js",
+      "_index-DXY5cShP.js"
+    ]
+  },
+  "pages/admin/AdminSettingsPage.jsx": {
+    "file": "assets/AdminSettingsPage-BV3odH5R.js",
+    "name": "AdminSettingsPage",
+    "src": "pages/admin/AdminSettingsPage.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_useQuery-Rt3S72ZS.js",
+      "_useMutation-C8vzS0_Q.js",
+      "_index-DXY5cShP.js"
+    ]
+  },
+  "pages/admin/SubscriptionsPage.jsx": {
+    "file": "assets/SubscriptionsPage-w9-5-__O.js",
+    "name": "SubscriptionsPage",
+    "src": "pages/admin/SubscriptionsPage.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_useQuery-Rt3S72ZS.js",
+      "_useMutation-C8vzS0_Q.js",
+      "_StatusBadge-DtDva7gu.js",
+      "_Modal-DG5C7CFd.js"
+    ]
+  },
+  "pages/admin/TenantsPage.jsx": {
+    "file": "assets/TenantsPage-CUzF2Suc.js",
+    "name": "TenantsPage",
+    "src": "pages/admin/TenantsPage.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_useQuery-Rt3S72ZS.js",
+      "_useMutation-C8vzS0_Q.js",
+      "_StatusBadge-DtDva7gu.js",
+      "_Modal-DG5C7CFd.js"
+    ]
+  },
+  "pages/auth/LoginPage.jsx": {
+    "file": "assets/LoginPage-CfNOStkx.js",
+    "name": "LoginPage",
+    "src": "pages/auth/LoginPage.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html"
+    ]
+  },
+  "pages/auth/RegisterPage.jsx": {
+    "file": "assets/RegisterPage-lCYmxnJj.js",
+    "name": "RegisterPage",
+    "src": "pages/auth/RegisterPage.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html"
+    ]
+  },
+  "pages/customer/CustomerCartPage.jsx": {
+    "file": "assets/CustomerCartPage-Cm7MfSXD.js",
+    "name": "CustomerCartPage",
+    "src": "pages/customer/CustomerCartPage.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_useMutation-C8vzS0_Q.js",
+      "_cartStore-BzO2gdoy.js",
+      "_index-DXY5cShP.js"
+    ]
+  },
+  "pages/customer/CustomerMenuPage.jsx": {
+    "file": "assets/CustomerMenuPage-CDZKGs5J.js",
+    "name": "CustomerMenuPage",
+    "src": "pages/customer/CustomerMenuPage.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_useQuery-Rt3S72ZS.js",
+      "_cartStore-BzO2gdoy.js"
+    ]
+  },
+  "pages/customer/OrderTrackingPage.jsx": {
+    "file": "assets/OrderTrackingPage-ZK7tG85i.js",
+    "name": "OrderTrackingPage",
+    "src": "pages/customer/OrderTrackingPage.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_useQuery-Rt3S72ZS.js",
+      "_StatusBadge-DtDva7gu.js",
+      "_POSInvoice-0SuoJ50S.js",
+      "_index-DXY5cShP.js"
+    ]
+  },
+  "pages/dashboard/CategoriesPage.jsx": {
+    "file": "assets/CategoriesPage-BxCY7pmF.js",
+    "name": "CategoriesPage",
+    "src": "pages/dashboard/CategoriesPage.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_useQuery-Rt3S72ZS.js",
+      "_useMutation-C8vzS0_Q.js",
+      "_Modal-DG5C7CFd.js"
+    ]
+  },
+  "pages/dashboard/DashboardPage.jsx": {
+    "file": "assets/DashboardPage-CY0k9c0m.js",
+    "name": "DashboardPage",
+    "src": "pages/dashboard/DashboardPage.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_useQuery-Rt3S72ZS.js",
+      "_StatusBadge-DtDva7gu.js"
+    ]
+  },
+  "pages/dashboard/MenuItemsPage.jsx": {
+    "file": "assets/MenuItemsPage-B28iJprh.js",
+    "name": "MenuItemsPage",
+    "src": "pages/dashboard/MenuItemsPage.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_useQuery-Rt3S72ZS.js",
+      "_useMutation-C8vzS0_Q.js",
+      "_Modal-DG5C7CFd.js",
+      "_index-DXY5cShP.js"
+    ]
+  },
+  "pages/dashboard/OrdersPage.jsx": {
+    "file": "assets/OrdersPage-DqUU7IPd.js",
+    "name": "OrdersPage",
+    "src": "pages/dashboard/OrdersPage.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_useQuery-Rt3S72ZS.js",
+      "_useMutation-C8vzS0_Q.js",
+      "_StatusBadge-DtDva7gu.js",
+      "_Modal-DG5C7CFd.js",
+      "_POSInvoice-0SuoJ50S.js",
+      "_index-DXY5cShP.js"
+    ]
+  },
+  "pages/dashboard/POSPage.jsx": {
+    "file": "assets/POSPage-C_-65yRe.js",
+    "name": "POSPage",
+    "src": "pages/dashboard/POSPage.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_useQuery-Rt3S72ZS.js",
+      "_index-DXY5cShP.js",
+      "_POSInvoice-0SuoJ50S.js"
+    ]
+  },
+  "pages/dashboard/ReportsPage.jsx": {
+    "file": "assets/ReportsPage-Bhsh29So.js",
+    "name": "ReportsPage",
+    "src": "pages/dashboard/ReportsPage.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_useQuery-Rt3S72ZS.js"
+    ]
+  },
+  "pages/dashboard/SettingsPage.jsx": {
+    "file": "assets/SettingsPage-Cgq7vf5k.js",
+    "name": "SettingsPage",
+    "src": "pages/dashboard/SettingsPage.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_useQuery-Rt3S72ZS.js",
+      "_useMutation-C8vzS0_Q.js",
+      "_index-DXY5cShP.js"
+    ]
+  },
+  "pages/dashboard/SettlementsPage.jsx": {
+    "file": "assets/SettlementsPage-DDvzAZFa.js",
+    "name": "SettlementsPage",
+    "src": "pages/dashboard/SettlementsPage.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_useQuery-Rt3S72ZS.js",
+      "_StatusBadge-DtDva7gu.js"
+    ]
+  },
+  "pages/dashboard/TablesPage.jsx": {
+    "file": "assets/TablesPage-C_CIAgFf.js",
+    "name": "TablesPage",
+    "src": "pages/dashboard/TablesPage.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_useQuery-Rt3S72ZS.js",
+      "_useMutation-C8vzS0_Q.js",
+      "_StatusBadge-DtDva7gu.js",
+      "_Modal-DG5C7CFd.js"
+    ]
+  },
+  "pages/dashboard/UsersPage.jsx": {
+    "file": "assets/UsersPage-CHFyOp3S.js",
+    "name": "UsersPage",
+    "src": "pages/dashboard/UsersPage.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_useQuery-Rt3S72ZS.js",
+      "_useMutation-C8vzS0_Q.js",
+      "_Modal-DG5C7CFd.js",
+      "_StatusBadge-DtDva7gu.js"
+    ]
+  },
+  "pages/dashboard/VouchersPage.jsx": {
+    "file": "assets/VouchersPage-BpryG188.js",
+    "name": "VouchersPage",
+    "src": "pages/dashboard/VouchersPage.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_useQuery-Rt3S72ZS.js",
+      "_useMutation-C8vzS0_Q.js",
+      "_Modal-DG5C7CFd.js"
+    ]
+  },
+  "pages/kitchen/KitchenDisplayPage.jsx": {
+    "file": "assets/KitchenDisplayPage-CS24wnGy.js",
+    "name": "KitchenDisplayPage",
+    "src": "pages/kitchen/KitchenDisplayPage.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_useQuery-Rt3S72ZS.js",
+      "_useMutation-C8vzS0_Q.js",
+      "_StatusBadge-DtDva7gu.js"
+    ]
+  }
+}

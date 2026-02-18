@@ -38,6 +38,7 @@ class Tenant extends Model
         'currency',
         'tax_rate',
         'is_active',
+        'max_users',
     ];
 
     protected function casts(): array
@@ -46,6 +47,7 @@ class Tenant extends Model
             'commission_rate' => 'decimal:2',
             'tax_rate' => 'decimal:2',
             'is_active' => 'boolean',
+            'max_users' => 'integer',
             'social_links' => 'array',
         ];
     }

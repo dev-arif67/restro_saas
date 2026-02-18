@@ -39,6 +39,7 @@ export default defineConfig({
         manifest: true,
     },
     server: {
+        // host: '192.168.0.165',
         port: 5173,
         proxy: {
             '/api': {

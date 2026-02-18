@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\OrderItem;
 use App\Models\RestaurantTable;
 use App\Models\Traits\BelongsToTenant;
+use App\Models\User;
 use App\Models\Voucher;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -33,6 +34,8 @@ class Order extends Model
         'transaction_id',
         'payment_gateway',
         'paid_at',
+        'source',
+        'served_by',
     ];
 
     protected function casts(): array
@@ -58,6 +61,11 @@ class Order extends Model
     public function table()
     {
         return $this->belongsTo(RestaurantTable::class, 'table_id');
+    }
+
+    public function servedBy()
+    {
+        return $this->belongsTo(User::class, 'served_by');
     }
 
     public function voucher()
