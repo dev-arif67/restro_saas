@@ -21,8 +21,9 @@ class StoreSubscriptionRequest extends FormRequest
             'payment_method' => 'nullable|string|in:bkash,sslcommerz,manual',
             'payment_ref' => 'nullable|string',
             'transaction_id' => 'nullable|string',
-            'starts_at' => 'required|date',
-            'expires_at' => 'required|date|after:starts_at',
+            'starts_at' => 'nullable|date',
+            'expires_at' => 'nullable|date|after:starts_at',
+            'custom_days' => 'nullable|integer|min:1|required_if:plan_type,custom',
             'notes' => 'nullable|string|max:500',
         ];
     }

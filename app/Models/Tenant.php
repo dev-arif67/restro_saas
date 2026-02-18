@@ -97,7 +97,7 @@ class Tenant extends Model
     {
         return $this->hasOne(Subscription::class)
             ->where('status', 'active')
-            ->where('expires_at', '>=', now())
+            ->where('expires_at', '>=', today())
             ->latest();
     }
 

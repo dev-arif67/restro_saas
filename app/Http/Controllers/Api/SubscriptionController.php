@@ -13,7 +13,7 @@ class SubscriptionController extends BaseApiController
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Subscription::with('tenant:id,name');
+        $query = Subscription::withoutGlobalScopes()->with('tenant:id,name');
 
         if ($tenantId = $request->get('tenant_id')) {
             $query->where('tenant_id', $tenantId);
@@ -34,8 +34,28 @@ class SubscriptionController extends BaseApiController
             ->where('status', 'active')
             ->update(['status' => 'expired']);
 
-        $subscription = Subscription::create([
-            ...$request->validated(),
+        // Auto-calculate dates from plan_type if not provided
+        $startsAt = $request->starts_at ?? now();
+        $expiresAt = $request->expires_at;
+
+        if (!$expiresAt) {
+            $planDays = match ($request->plan_type) {
+                'monthly' => config('saas.plans.monthly.duration_days', 30),
+                'yearly' => config('saas.plans.yearly.duration_days', 365),
+                'custom' => $request->custom_days ?? 30,
+                default => 30,
+            };
+            $expiresAt = now()->addDays($planDays);
+        }
+
+        $data = collect($request->validated())
+            ->except(['starts_at', 'expires_at', 'custom_days'])
+            ->toArray();
+
+        $subscription = Subscription::withoutGlobalScopes()->create([
+            ...$data,
+            'starts_at' => $startsAt,
+            'expires_at' => $expiresAt,
             'status' => 'active',
         ]);
 
@@ -51,7 +71,7 @@ class SubscriptionController extends BaseApiController
 
     public function show(int $id): JsonResponse
     {
-        $subscription = Subscription::with('tenant')->find($id);
+        $subscription = Subscription::withoutGlobalScopes()->with('tenant')->find($id);
 
         if (!$subscription) {
             return $this->notFound('Subscription not found');
@@ -62,7 +82,7 @@ class SubscriptionController extends BaseApiController
 
     public function cancel(int $id): JsonResponse
     {
-        $subscription = Subscription::find($id);
+        $subscription = Subscription::withoutGlobalScopes()->find($id);
 
         if (!$subscription) {
             return $this->notFound('Subscription not found');

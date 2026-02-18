@@ -36,29 +36,29 @@ class Subscription extends Model
     public function scopeActive($query)
     {
         return $query->where('status', 'active')
-            ->where('expires_at', '>=', now());
+            ->where('expires_at', '>=', today());
     }
 
     public function scopeExpired($query)
     {
         return $query->where('status', 'active')
-            ->where('expires_at', '<', now());
+            ->where('expires_at', '<', today());
     }
 
     // Helpers
     public function isActive(): bool
     {
-        return $this->status === 'active' && $this->expires_at->isFuture();
+        return $this->status === 'active' && $this->expires_at->gte(today());
     }
 
     public function isExpired(): bool
     {
-        return $this->expires_at->isPast();
+        return $this->expires_at->lt(today());
     }
 
     public function daysRemaining(): int
     {
-        return max(0, now()->diffInDays($this->expires_at, false));
+        return max(0, today()->diffInDays($this->expires_at, false));
     }
 
     public function markExpired(): void
