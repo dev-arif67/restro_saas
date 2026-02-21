@@ -93,8 +93,9 @@ export default function POSPage() {
     const [voucherLoading, setVoucherLoading] = useState(false);
     const [showCheckout, setShowCheckout] = useState(false);
 
-    // Tenant tax rate from authenticated user's tenant
-    const taxRate = parseFloat(user?.tenant?.tax_rate ?? 0);
+    // Tenant VAT config from authenticated user's tenant
+    const vatRate = parseFloat(user?.tenant?.default_vat_rate ?? 0);
+    const vatInclusive = !!user?.tenant?.vat_inclusive;
 
     // ── Queries ────────────────────────────────────────────────────────────────
     const { data: categoriesData } = useQuery({
@@ -133,7 +134,7 @@ export default function POSPage() {
     }, [cart?.id]);
 
     // ── Cart totals ────────────────────────────────────────────────────────────
-    const totals = store.getCartTotals(taxRate);
+    const totals = store.getCartTotals(vatRate, vatInclusive);
 
     // ── Apply voucher ──────────────────────────────────────────────────────────
     async function applyVoucher() {
@@ -500,10 +501,16 @@ export default function POSPage() {
                                 <span>-৳{totals.discount.toFixed(2)}</span>
                             </div>
                         )}
-                        {totals.tax > 0 && (
+                        {totals.netAmount !== totals.subtotal - totals.discount && (
                             <div className="flex justify-between text-gray-500">
-                                <span>Tax</span>
-                                <span>৳{totals.tax.toFixed(2)}</span>
+                                <span>Net Amount</span>
+                                <span>৳{totals.netAmount.toFixed(2)}</span>
+                            </div>
+                        )}
+                        {totals.vat > 0 && (
+                            <div className="flex justify-between text-gray-500">
+                                <span>VAT ({vatRate}%){vatInclusive ? ' (incl.)' : ''}</span>
+                                <span>৳{totals.vat.toFixed(2)}</span>
                             </div>
                         )}
                         <div className="flex justify-between font-bold text-gray-900 text-base pt-1 border-t border-gray-200">

@@ -41,6 +41,14 @@ const LandingPage = lazy(() => import('./pages/LandingPage'));
 const TenantsPage = lazy(() => import('./pages/admin/TenantsPage'));
 const SubscriptionsPage = lazy(() => import('./pages/admin/SubscriptionsPage'));
 const AdminSettingsPage = lazy(() => import('./pages/admin/AdminSettingsPage'));
+const AdminDashboardPage = lazy(() => import('./pages/admin/AdminDashboardPage'));
+const AdminTenantDetailPage = lazy(() => import('./pages/admin/AdminTenantDetailPage'));
+const AdminPlansPage = lazy(() => import('./pages/admin/AdminPlansPage'));
+const AdminAnnouncementsPage = lazy(() => import('./pages/admin/AdminAnnouncementsPage'));
+const AdminSystemPage = lazy(() => import('./pages/admin/AdminSystemPage'));
+const AdminAuditLogPage = lazy(() => import('./pages/admin/AdminAuditLogPage'));
+const AdminEnquiriesPage = lazy(() => import('./pages/admin/AdminEnquiriesPage'));
+const AdminFinancialPage = lazy(() => import('./pages/admin/AdminFinancialPage'));
 
 function ProtectedRoute({ children, roles }) {
     const { user, token } = useAuthStore();
@@ -89,9 +97,61 @@ export default function App() {
                         </ProtectedRoute>
                     } />
                     {/* Admin routes */}
-                    <Route path="tenants" element={<TenantsPage />} />
-                    <Route path="subscriptions" element={<SubscriptionsPage />} />
-                    <Route path="platform-settings" element={<AdminSettingsPage />} />
+                    <Route path="admin" element={
+                        <ProtectedRoute roles={['super_admin']}>
+                            <AdminDashboardPage />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="admin/tenants" element={
+                        <ProtectedRoute roles={['super_admin']}>
+                            <TenantsPage />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="admin/tenants/:id" element={
+                        <ProtectedRoute roles={['super_admin']}>
+                            <AdminTenantDetailPage />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="admin/subscriptions" element={
+                        <ProtectedRoute roles={['super_admin']}>
+                            <SubscriptionsPage />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="admin/plans" element={
+                        <ProtectedRoute roles={['super_admin']}>
+                            <AdminPlansPage />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="admin/announcements" element={
+                        <ProtectedRoute roles={['super_admin']}>
+                            <AdminAnnouncementsPage />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="admin/enquiries" element={
+                        <ProtectedRoute roles={['super_admin']}>
+                            <AdminEnquiriesPage />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="admin/financials" element={
+                        <ProtectedRoute roles={['super_admin']}>
+                            <AdminFinancialPage />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="admin/system" element={
+                        <ProtectedRoute roles={['super_admin']}>
+                            <AdminSystemPage />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="admin/audit-logs" element={
+                        <ProtectedRoute roles={['super_admin']}>
+                            <AdminAuditLogPage />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="admin/settings" element={
+                        <ProtectedRoute roles={['super_admin']}>
+                            <AdminSettingsPage />
+                        </ProtectedRoute>
+                    } />
                 </Route>
 
                 {/* Kitchen Display */}

@@ -265,11 +265,156 @@ function SubscriptionTab() {
     );
 }
 
+function VatSettingsTab() {
+    const queryClient = useQueryClient();
+    const [form, setForm] = useState({
+        vat_registered: false,
+        vat_number: '',
+        default_vat_rate: '5.00',
+        vat_inclusive: false,
+    });
+
+    const { data, isLoading } = useQuery({
+        queryKey: ['tenant-branding'],
+        queryFn: () => brandingAPI.get().then((r) => r.data.data),
+    });
+
+    useEffect(() => {
+        if (data) {
+            setForm({
+                vat_registered: !!data.vat_registered,
+                vat_number: data.vat_number || '',
+                default_vat_rate: data.default_vat_rate ?? '5.00',
+                vat_inclusive: !!data.vat_inclusive,
+            });
+        }
+    }, [data]);
+
+    const mutation = useMutation({
+        mutationFn: (fd) => brandingAPI.update(fd),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['tenant-branding']);
+            toast.success('VAT settings updated!');
+        },
+        onError: (err) => toast.error(err.response?.data?.message || 'Failed to update'),
+    });
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        const fd = new FormData();
+        fd.append('vat_registered', form.vat_registered ? '1' : '0');
+        fd.append('vat_number', form.vat_number);
+        fd.append('default_vat_rate', form.default_vat_rate);
+        fd.append('vat_inclusive', form.vat_inclusive ? '1' : '0');
+        mutation.mutate(fd);
+    };
+
+    if (isLoading) return <LoadingSpinner />;
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="card">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">VAT / BIN Configuration</h3>
+                <p className="text-sm text-gray-500 mb-6">
+                    Configure your VAT settings for Bangladesh NBR compliance. These settings affect how invoices are generated and VAT is calculated.
+                </p>
+
+                <div className="space-y-5">
+                    {/* VAT Registered toggle */}
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div>
+                            <p className="font-medium text-gray-800">VAT Registered</p>
+                            <p className="text-sm text-gray-500">Enable if your restaurant is registered for VAT with NBR</p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setForm((p) => ({ ...p, vat_registered: !p.vat_registered }))}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${form.vat_registered ? 'bg-blue-600' : 'bg-gray-300'}`}
+                        >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${form.vat_registered ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                    </div>
+
+                    {/* BIN Number */}
+                    <div>
+                        <label className="label">BIN / VAT Registration Number</label>
+                        <input
+                            className="input"
+                            value={form.vat_number}
+                            onChange={(e) => setForm((p) => ({ ...p, vat_number: e.target.value }))}
+                            placeholder="Enter your 13-digit BIN number"
+                            maxLength={20}
+                        />
+                        <p className="text-xs text-gray-400 mt-1">Business Identification Number issued by NBR. Printed on invoices.</p>
+                    </div>
+
+                    {/* Default VAT Rate */}
+                    <div>
+                        <label className="label">Default VAT Rate (%)</label>
+                        <input
+                            type="number"
+                            className="input"
+                            value={form.default_vat_rate}
+                            onChange={(e) => setForm((p) => ({ ...p, default_vat_rate: e.target.value }))}
+                            step="0.01"
+                            min="0"
+                            max="100"
+                            placeholder="5.00"
+                        />
+                        <p className="text-xs text-gray-400 mt-1">Standard rate for restaurants in Bangladesh is 5%. Set to 0 to disable VAT.</p>
+                    </div>
+
+                    {/* VAT Inclusive toggle */}
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div>
+                            <p className="font-medium text-gray-800">VAT Inclusive Pricing</p>
+                            <p className="text-sm text-gray-500">When enabled, menu prices already include VAT. When disabled, VAT is added on top.</p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setForm((p) => ({ ...p, vat_inclusive: !p.vat_inclusive }))}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${form.vat_inclusive ? 'bg-blue-600' : 'bg-gray-300'}`}
+                        >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${form.vat_inclusive ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                    </div>
+
+                    {/* Preview */}
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-sm font-medium text-blue-800 mb-2">Calculation Preview (item priced ৳100)</p>
+                        {form.vat_inclusive ? (
+                            <div className="text-sm text-blue-700 space-y-0.5">
+                                <p>Price shown: ৳100.00 (VAT included)</p>
+                                <p>VAT ({form.default_vat_rate}%): ৳{(100 * parseFloat(form.default_vat_rate || 0) / (100 + parseFloat(form.default_vat_rate || 0))).toFixed(2)}</p>
+                                <p>Net: ৳{(100 - 100 * parseFloat(form.default_vat_rate || 0) / (100 + parseFloat(form.default_vat_rate || 0))).toFixed(2)}</p>
+                                <p className="font-bold">Customer pays: ৳100.00</p>
+                            </div>
+                        ) : (
+                            <div className="text-sm text-blue-700 space-y-0.5">
+                                <p>Price shown: ৳100.00 (excl. VAT)</p>
+                                <p>VAT ({form.default_vat_rate}%): ৳{(100 * parseFloat(form.default_vat_rate || 0) / 100).toFixed(2)}</p>
+                                <p className="font-bold">Customer pays: ৳{(100 + 100 * parseFloat(form.default_vat_rate || 0) / 100).toFixed(2)}</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex justify-end">
+                <button type="submit" disabled={mutation.isPending} className="btn-primary px-8">
+                    {mutation.isPending ? 'Saving...' : 'Save VAT Settings'}
+                </button>
+            </div>
+        </form>
+    );
+}
+
 export default function SettingsPage() {
     const [activeTab, setActiveTab] = useState('branding');
 
     const tabs = [
         { id: 'branding', label: 'Branding' },
+        { id: 'vat', label: 'VAT Settings' },
         { id: 'subscription', label: 'Subscription' },
     ];
 
@@ -295,6 +440,7 @@ export default function SettingsPage() {
             </div>
 
             {activeTab === 'branding' && <BrandingTab />}
+            {activeTab === 'vat' && <VatSettingsTab />}
             {activeTab === 'subscription' && <SubscriptionTab />}
         </div>
     );

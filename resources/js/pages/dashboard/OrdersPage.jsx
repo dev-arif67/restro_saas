@@ -232,7 +232,12 @@ export default function OrdersPage() {
                         <div className="text-right space-y-1">
                             <p>Subtotal: ৳{viewOrder.subtotal}</p>
                             {parseFloat(viewOrder.discount) > 0 && <p className="text-green-600">Discount: -৳{viewOrder.discount}</p>}
-                            {parseFloat(viewOrder.tax) > 0 && <p>Tax: ৳{viewOrder.tax}</p>}
+                            {parseFloat(viewOrder.net_amount) > 0 && parseFloat(viewOrder.net_amount) !== parseFloat(viewOrder.subtotal) - parseFloat(viewOrder.discount) && (
+                                <p>Net Amount: ৳{viewOrder.net_amount}</p>
+                            )}
+                            {parseFloat(viewOrder.vat_amount || viewOrder.tax || 0) > 0 && (
+                                <p>VAT ({viewOrder.vat_rate ?? 0}%): ৳{viewOrder.vat_amount || viewOrder.tax}</p>
+                            )}
                             <p className="text-xl font-bold">Total: ৳{viewOrder.grand_total}</p>
                         </div>
 
@@ -258,8 +263,7 @@ export default function OrdersPage() {
             {/* POS Invoice Overlay */}
             {invoiceData && (
                 <POSInvoice
-                    order={invoiceData.order}
-                    restaurant={invoiceData.restaurant}
+                    data={invoiceData}
                     onClose={() => setInvoiceData(null)}
                 />
             )}

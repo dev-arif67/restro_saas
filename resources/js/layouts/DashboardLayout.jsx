@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useBrandingStore } from '../stores/brandingStore';
+import { authAPI } from '../services/api';
 import PoweredBy from '../components/ui/PoweredBy';
 import {
     HiOutlineHome,
@@ -23,11 +24,17 @@ import {
     HiOutlineBell,
     HiOutlineUser,
     HiOutlineChevronDown,
+    HiOutlineSpeakerphone,
+    HiOutlineServer,
+    HiOutlineDocumentText,
+    HiOutlineMail,
+    HiOutlineTicket,
 } from 'react-icons/hi';
 import { HiArrowsPointingOut, HiArrowsPointingIn } from 'react-icons/hi2';
 
-const menuItems = [
-    { icon: HiOutlineHome, label: 'Dashboard', to: '/dashboard', roles: ['super_admin', 'restaurant_admin', 'staff'] },
+// Restaurant/Tenant menu items
+const tenantMenuItems = [
+    { icon: HiOutlineHome, label: 'Dashboard', to: '/dashboard', roles: ['restaurant_admin', 'staff'] },
     { icon: HiOutlineDesktopComputer, label: 'POS Terminal', to: '/dashboard/pos', roles: ['restaurant_admin', 'staff'] },
     { icon: HiOutlineShoppingCart, label: 'Orders', to: '/dashboard/orders', roles: ['restaurant_admin', 'staff'] },
     { icon: HiOutlineClipboardList, label: 'Menu Items', to: '/dashboard/menu', roles: ['restaurant_admin'] },
@@ -38,14 +45,32 @@ const menuItems = [
     { icon: HiOutlineCash, label: 'Settlements', to: '/dashboard/settlements', roles: ['restaurant_admin'] },
     { icon: HiOutlineUsers, label: 'Users', to: '/dashboard/users', roles: ['restaurant_admin'] },
     { icon: HiOutlineCog, label: 'Settings', to: '/dashboard/settings', roles: ['restaurant_admin'] },
-    // Super admin
-    { icon: HiOutlineOfficeBuilding, label: 'Tenants', to: '/dashboard/tenants', roles: ['super_admin'] },
-    { icon: HiOutlineCreditCard, label: 'Subscriptions', to: '/dashboard/subscriptions', roles: ['super_admin'] },
-    { icon: HiOutlineCog, label: 'Platform Settings', to: '/dashboard/platform-settings', roles: ['super_admin'] },
 ];
 
+// Super Admin menu items
+const superAdminMenuItems = [
+    { icon: HiOutlineHome, label: 'Dashboard', to: '/dashboard/admin', roles: ['super_admin'] },
+    { icon: HiOutlineOfficeBuilding, label: 'Tenants', to: '/dashboard/admin/tenants', roles: ['super_admin'] },
+    { icon: HiOutlineCreditCard, label: 'Subscriptions', to: '/dashboard/admin/subscriptions', roles: ['super_admin'] },
+    { icon: HiOutlineTicket, label: 'Plans', to: '/dashboard/admin/plans', roles: ['super_admin'] },
+    { icon: HiOutlineCash, label: 'Financials', to: '/dashboard/admin/financials', roles: ['super_admin'] },
+    { icon: HiOutlineSpeakerphone, label: 'Announcements', to: '/dashboard/admin/announcements', roles: ['super_admin'] },
+    { icon: HiOutlineMail, label: 'Enquiries', to: '/dashboard/admin/enquiries', roles: ['super_admin'] },
+    { icon: HiOutlineServer, label: 'System', to: '/dashboard/admin/system', roles: ['super_admin'] },
+    { icon: HiOutlineDocumentText, label: 'Audit Logs', to: '/dashboard/admin/audit-logs', roles: ['super_admin'] },
+    { icon: HiOutlineCog, label: 'Platform Settings', to: '/dashboard/admin/settings', roles: ['super_admin'] },
+];
+
+// Combine based on user role
+const getMenuItems = (userRole) => {
+    if (userRole === 'super_admin') {
+        return superAdminMenuItems;
+    }
+    return tenantMenuItems.filter(item => item.roles.includes(userRole));
+};
+
 export default function DashboardLayout() {
-    const { user, logout } = useAuthStore();
+    const { user, logout, updateUser } = useAuthStore();
     const { branding } = useBrandingStore();
     const navigate = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -69,6 +94,14 @@ export default function DashboardLayout() {
         }
     }, []);
 
+    // Refresh user + tenant data on mount so VAT settings are always current
+    useEffect(() => {
+        authAPI.me().then((res) => {
+            const userData = res.data?.data?.user ?? res.data?.user;
+            if (userData) updateUser(userData);
+        }).catch(() => {});
+    }, []);
+
     // Listen for fullscreen changes (e.g. user presses Esc)
     useEffect(() => {
         const handler = () => setIsFullscreen(!!document.fullscreenElement);
@@ -90,9 +123,7 @@ export default function DashboardLayout() {
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-    const filteredMenu = menuItems.filter(
-        (item) => item.roles.includes(user?.role)
-    );
+    const filteredMenu = getMenuItems(user?.role);
 
     const sidebarWidth = sidebarCollapsed ? 'w-[72px]' : 'w-64';
 

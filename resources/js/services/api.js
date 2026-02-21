@@ -131,6 +131,8 @@ export const reportAPI = {
     topItems: (params) => api.get('/reports/top-items', { params }),
     revenueComparison: () => api.get('/reports/revenue-comparison'),
     settlements: () => api.get('/reports/settlements'),
+    vatDaily: (params) => api.get('/reports/vat/daily', { params }),
+    vatMonthly: (params) => api.get('/reports/vat/monthly', { params }),
 };
 
 // Settlements
@@ -195,15 +197,33 @@ export const adminAPI = {
         update: (id, data) => api.put(`/admin/tenants/${id}`, data),
         delete: (id) => api.delete(`/admin/tenants/${id}`),
         dashboard: () => api.get('/admin/tenants-dashboard'),
+        stats: (id) => api.get(`/admin/tenants/${id}/stats`),
+        impersonate: (id) => api.post(`/admin/tenants/${id}/impersonate`),
+        sendEmail: (id, data) => api.post(`/admin/tenants/${id}/send-email`, data),
+        bulkAction: (data) => api.post('/admin/tenants/bulk-action', data),
+        export: () => api.get('/admin/tenants/export', { responseType: 'blob' }),
     },
     subscriptions: {
         list: (params) => api.get('/admin/subscriptions', { params }),
         create: (data) => api.post('/admin/subscriptions', data),
+        show: (id) => api.get(`/admin/subscriptions/${id}`),
         cancel: (id) => api.post(`/admin/subscriptions/${id}/cancel`),
+        expiringSoon: () => api.get('/admin/subscriptions/expiring-soon'),
+        extend: (id, data) => api.post(`/admin/subscriptions/${id}/extend`, data),
+        renew: (tenantId, data) => api.post(`/admin/subscriptions/${tenantId}/renew`, data),
+    },
+    plans: {
+        list: () => api.get('/admin/plans'),
+        create: (data) => api.post('/admin/plans', data),
+        show: (id) => api.get(`/admin/plans/${id}`),
+        update: (id, data) => api.put(`/admin/plans/${id}`, data),
+        delete: (id) => api.delete(`/admin/plans/${id}`),
     },
     settlements: {
-        all: (params) => api.get('/admin/all-settlements', { params }),
-        addPayment: (id, data) => api.post(`/admin/settlements/${id}/payment`, data),
+        list: (params) => api.get('/admin/settlements', { params }),
+        show: (id) => api.get(`/admin/settlements/${id}`),
+        stats: () => api.get('/admin/settlements/stats'),
+        recordPayment: (id, data) => api.post(`/admin/settlements/${id}/payment`, data),
     },
     settings: {
         get: () => api.get('/admin/settings'),
@@ -214,7 +234,43 @@ export const adminAPI = {
     enquiries: {
         list: (params) => api.get('/admin/enquiries', { params }),
         show: (id) => api.get(`/admin/enquiries/${id}`),
+        markRead: (id) => api.patch(`/admin/enquiries/${id}/read`),
+        reply: (id, data) => api.post(`/admin/enquiries/${id}/reply`, data),
         updateStatus: (id, status) => api.patch(`/admin/enquiries/${id}/status`, { status }),
         delete: (id) => api.delete(`/admin/enquiries/${id}`),
     },
+    announcements: {
+        list: (params) => api.get('/admin/announcements', { params }),
+        create: (data) => api.post('/admin/announcements', data),
+        show: (id) => api.get(`/admin/announcements/${id}`),
+        update: (id, data) => api.put(`/admin/announcements/${id}`, data),
+        delete: (id) => api.delete(`/admin/announcements/${id}`),
+        send: (id) => api.post(`/admin/announcements/${id}/send`),
+    },
+    system: {
+        health: () => api.get('/admin/system/health'),
+        info: () => api.get('/admin/system/info'),
+        queueStats: () => api.get('/admin/system/queue-stats'),
+        retryFailedJobs: () => api.post('/admin/system/retry-failed-jobs'),
+        clearCache: (type) => api.post('/admin/system/clear-cache', { type }),
+        logs: (lines = 100) => api.get('/admin/system/logs', { params: { lines } }),
+    },
+    auditLogs: {
+        list: (params) => api.get('/admin/audit-logs', { params }),
+        show: (id) => api.get(`/admin/audit-logs/${id}`),
+        actions: () => api.get('/admin/audit-logs/actions'),
+        stats: (days = 30) => api.get('/admin/audit-logs/stats', { params: { days } }),
+        export: (params) => api.get('/admin/audit-logs/export', { params, responseType: 'blob' }),
+    },
+};
+
+// Announcements for tenant users
+export const announcementAPI = {
+    active: () => api.get('/announcements/active'),
+    markAsRead: (id) => api.post(`/announcements/${id}/read`),
+};
+
+// Public Plans
+export const plansAPI = {
+    list: () => api.get('/plans'),
 };

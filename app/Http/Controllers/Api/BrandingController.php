@@ -25,6 +25,7 @@ class BrandingController extends BaseApiController
             'id', 'name', 'slug', 'logo', 'logo_dark', 'favicon',
             'primary_color', 'secondary_color', 'accent_color',
             'description', 'social_links', 'banner_image',
+            'vat_registered', 'vat_number', 'default_vat_rate', 'vat_inclusive',
         ]));
     }
 
@@ -53,11 +54,16 @@ class BrandingController extends BaseApiController
             'logo_dark'       => 'nullable|image|mimes:png,jpg,jpeg,svg,webp|max:2048',
             'favicon'         => 'nullable|image|mimes:png,ico,svg|max:512',
             'banner_image'    => 'nullable|image|mimes:png,jpg,jpeg,webp|max:4096',
+            'vat_registered'  => 'nullable|boolean',
+            'vat_number'      => 'nullable|string|max:20',
+            'default_vat_rate'=> 'nullable|numeric|min:0|max:100',
+            'vat_inclusive'   => 'nullable|boolean',
         ]);
 
         $data = $request->only([
             'name', 'description', 'primary_color',
             'secondary_color', 'accent_color', 'social_links',
+            'vat_registered', 'vat_number', 'default_vat_rate', 'vat_inclusive',
         ]);
 
         // Handle file uploads
@@ -88,6 +94,7 @@ class BrandingController extends BaseApiController
             'id', 'name', 'slug', 'logo', 'logo_dark', 'favicon',
             'primary_color', 'secondary_color', 'accent_color',
             'description', 'social_links', 'banner_image',
+            'vat_registered', 'vat_number', 'default_vat_rate', 'vat_inclusive',
         ]), 'Branding updated successfully');
     }
 }

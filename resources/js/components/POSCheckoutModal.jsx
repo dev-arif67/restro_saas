@@ -98,8 +98,7 @@ export default function POSCheckoutModal({ cart, totals, onSuccess, onClose }) {
     if (invoiceData) {
         return (
             <POSInvoice
-                order={invoiceData.order}
-                restaurant={invoiceData.restaurant}
+                data={invoiceData}
                 onClose={handleInvoiceClose}
             />
         );

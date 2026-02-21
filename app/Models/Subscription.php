@@ -12,6 +12,7 @@ class Subscription extends Model
 
     protected $fillable = [
         'tenant_id',
+        'plan_id',
         'plan_type',
         'amount',
         'payment_method',
@@ -30,6 +31,14 @@ class Subscription extends Model
             'starts_at' => 'date',
             'expires_at' => 'date',
         ];
+    }
+
+    /**
+     * Get the subscription plan.
+     */
+    public function plan()
+    {
+        return $this->belongsTo(SubscriptionPlan::class, 'plan_id');
     }
 
     // Scopes

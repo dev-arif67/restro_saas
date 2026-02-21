@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Category;
+use App\Models\InvoiceCounter;
 use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\RestaurantTable;
@@ -37,6 +38,10 @@ class Tenant extends Model
         'commission_rate',
         'currency',
         'tax_rate',
+        'vat_registered',
+        'vat_number',
+        'default_vat_rate',
+        'vat_inclusive',
         'is_active',
         'max_users',
     ];
@@ -46,6 +51,9 @@ class Tenant extends Model
         return [
             'commission_rate' => 'decimal:2',
             'tax_rate' => 'decimal:2',
+            'vat_registered' => 'boolean',
+            'default_vat_rate' => 'decimal:2',
+            'vat_inclusive' => 'boolean',
             'is_active' => 'boolean',
             'max_users' => 'integer',
             'social_links' => 'array',
@@ -91,6 +99,11 @@ class Tenant extends Model
     public function settlements()
     {
         return $this->hasMany(Settlement::class);
+    }
+
+    public function invoiceCounter()
+    {
+        return $this->hasOne(InvoiceCounter::class);
     }
 
     public function activeSubscription()

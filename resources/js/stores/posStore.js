@@ -176,17 +176,29 @@ export const usePosStore = create(
             },
 
             // ── Totals ─────────────────────────────────────────────────
-            getCartTotals(taxRate = TAX_RATE_DEFAULT) {
+            getCartTotals(vatRate = TAX_RATE_DEFAULT, vatInclusive = false) {
                 const cart = get().getActiveCart();
-                if (!cart) return { subtotal: 0, discount: 0, tax: 0, grandTotal: 0 };
+                if (!cart) return { subtotal: 0, discount: 0, netAmount: 0, vat: 0, grandTotal: 0 };
 
                 const subtotal = cart.items.reduce((s, i) => s + i.price * i.qty, 0);
                 const discount = cart.voucherDiscount ?? 0;
                 const afterDiscount = Math.max(0, subtotal - discount);
-                const tax = Math.round(afterDiscount * (taxRate / 100) * 100) / 100;
-                const grandTotal = afterDiscount + tax;
 
-                return { subtotal, discount, tax, grandTotal };
+                let vat, netAmount, grandTotal;
+
+                if (vatInclusive) {
+                    // VAT is already included in prices
+                    vat = Math.round(afterDiscount * (vatRate / (100 + vatRate)) * 100) / 100;
+                    netAmount = Math.round((afterDiscount - vat) * 100) / 100;
+                    grandTotal = afterDiscount;
+                } else {
+                    // VAT exclusive — add on top
+                    netAmount = afterDiscount;
+                    vat = Math.round(afterDiscount * (vatRate / 100) * 100) / 100;
+                    grandTotal = afterDiscount + vat;
+                }
+
+                return { subtotal, discount, netAmount, vat, grandTotal };
             },
 
             getTotalItems() {

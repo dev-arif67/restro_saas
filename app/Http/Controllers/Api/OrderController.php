@@ -7,18 +7,21 @@ use App\Events\OrderStatusUpdated;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\UpdateOrderStatusRequest;
-use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\RestaurantTable;
 use App\Models\Tenant;
 use App\Models\Voucher;
+use App\Services\BillingService;
 use App\Services\SslCommerzService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class OrderController extends BaseApiController
 {
+    public function __construct(
+        protected BillingService $billingService,
+    ) {}
+
     /**
      * List orders (authenticated restaurant users)
      */
@@ -81,103 +84,13 @@ class OrderController extends BaseApiController
             }
         }
 
-        return DB::transaction(function () use ($request, $tenant) {
-            // Validate table for dine-in
-            $tableId = null;
-            if ($request->type === 'dine' && $request->table_id) {
-                $table = RestaurantTable::withoutGlobalScopes()
-                    ->where('tenant_id', $tenant->id)
-                    ->where('id', $request->table_id)
-                    ->first();
-
-                if (!$table) {
-                    return $this->error('Invalid table', 422);
-                }
-
-                $tableId = $table->id;
-            }
-
-            // Validate and process voucher
-            $voucherId = null;
-            $discount = 0;
-
-            // Build order items and calculate subtotal
-            $orderItems = [];
-            $subtotal = 0;
-
-            foreach ($request->items as $item) {
-                $menuItem = MenuItem::withoutGlobalScopes()
-                    ->where('tenant_id', $tenant->id)
-                    ->where('id', $item['menu_item_id'])
-                    ->where('is_active', true)
-                    ->first();
-
-                if (!$menuItem) {
-                    return $this->error("Menu item #{$item['menu_item_id']} is not available", 422);
-                }
-
-                $lineTotal = $menuItem->price * $item['qty'];
-                $subtotal += $lineTotal;
-
-                $orderItems[] = [
-                    'menu_item_id' => $menuItem->id,
-                    'qty' => $item['qty'],
-                    'price_at_sale' => $menuItem->price,
-                    'line_total' => $lineTotal,
-                    'special_instructions' => $item['special_instructions'] ?? null,
-                ];
-            }
-
-            // Process voucher after subtotal calculation
-            if ($request->voucher_code) {
-                $voucher = Voucher::withoutGlobalScopes()
-                    ->where('tenant_id', $tenant->id)
-                    ->where('code', $request->voucher_code)
-                    ->first();
-
-                if ($voucher && $voucher->isValid()) {
-                    $discount = $voucher->calculateDiscount($subtotal);
-                    $voucherId = $voucher->id;
-                    $voucher->incrementUsage();
-                }
-            }
-
-            // Calculate tax
-            $afterDiscount = $subtotal - $discount;
-            $tax = round($afterDiscount * ($tenant->tax_rate / 100), 2);
-            $grandTotal = $afterDiscount + $tax;
-
-            // Create order
-            $order = Order::withoutGlobalScopes()->create([
-                'tenant_id' => $tenant->id,
-                'table_id' => $tableId,
-                'voucher_id' => $voucherId,
-                'order_number' => Order::generateOrderNumber($tenant->id),
-                'customer_name' => $request->customer_name,
-                'customer_phone' => $request->customer_phone,
-                'subtotal' => $subtotal,
-                'discount' => $discount,
-                'tax' => $tax,
-                'grand_total' => $grandTotal,
-                'type' => $request->type,
-                'status' => 'placed',
-                'ip_address' => $request->ip(),
-                'notes' => $request->notes,
-                'payment_method' => $request->payment_method ?? 'cash',
-                'payment_status' => ($request->payment_method === 'cash') ? 'pending' : 'pending',
-            ]);
-
-            // Create order items
-            $order->items()->createMany($orderItems);
-
-            // Mark table as occupied if dine-in
-            if ($tableId) {
-                RestaurantTable::withoutGlobalScopes()
-                    ->where('id', $tableId)
-                    ->update(['status' => 'occupied']);
-            }
-
-            $order->load(['items.menuItem', 'table', 'voucher']);
+        try {
+            $order = $this->billingService->createOrder(
+                tenant: $tenant,
+                data: $request->validated(),
+                servedBy: null,
+                source: 'customer',
+            );
 
             // Broadcast new order event
             broadcast(new NewOrderCreated($order))->toOthers();
@@ -201,7 +114,7 @@ class OrderController extends BaseApiController
                         'customer_name'  => $order->customer_name ?? 'Customer',
                         'customer_phone' => $order->customer_phone ?? '01700000000',
                         'product_name'   => "Order #{$order->order_number}",
-                        'num_items'      => count($orderItems),
+                        'num_items'      => $order->items->count(),
                     ]);
 
                     if ($result['success']) {
@@ -220,7 +133,9 @@ class OrderController extends BaseApiController
             }
 
             return $this->created($responseData, 'Order placed successfully');
-        });
+        } catch (\InvalidArgumentException $e) {
+            return $this->error($e->getMessage(), 422);
+        }
     }
 
     public function show(int $id): JsonResponse
@@ -320,7 +235,7 @@ class OrderController extends BaseApiController
     }
 
     /**
-     * Public endpoint: Get full invoice data for an order
+     * Public endpoint: Get full VAT-compliant invoice data for an order
      */
     public function invoice(string $orderNumber): JsonResponse
     {
@@ -337,10 +252,39 @@ class OrderController extends BaseApiController
         $tenant = Tenant::find($order->tenant_id);
 
         return $this->success([
-            'order' => $order,
-            'restaurant' => $tenant ? $tenant->only([
-                'name', 'slug', 'logo', 'phone', 'address', 'email', 'currency', 'tax_rate',
-            ]) : null,
+            'invoice' => [
+                'invoice_number'  => $order->invoice_number,
+                'date'            => $order->created_at->toIso8601String(),
+                'order_number'    => $order->order_number,
+            ],
+            'restaurant' => $tenant ? [
+                'name'       => $tenant->name,
+                'address'    => $tenant->address,
+                'phone'      => $tenant->phone,
+                'email'      => $tenant->email,
+                'vat_number' => $tenant->vat_number,
+                'currency'   => $tenant->currency,
+            ] : null,
+            'items' => $order->items->map(fn ($item) => [
+                'name'             => $item->menuItem?->name,
+                'qty'              => $item->qty,
+                'unit_price'       => $item->price_at_sale,
+                'line_total'       => $item->line_total,
+                'special_instructions' => $item->special_instructions,
+            ]),
+            'totals' => [
+                'subtotal'    => $order->subtotal,
+                'discount'    => $order->discount,
+                'net_amount'  => $order->net_amount,
+                'vat_rate'    => $order->vat_rate,
+                'vat_amount'  => $order->vat_amount,
+                'grand_total' => $order->grand_total,
+            ],
+            'payment' => [
+                'method' => $order->payment_method,
+                'status' => $order->payment_status,
+                'paid_at' => $order->paid_at?->toIso8601String(),
+            ],
         ]);
     }
 

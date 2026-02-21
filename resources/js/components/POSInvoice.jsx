@@ -1,8 +1,49 @@
 import React, { useRef } from 'react';
 import { HiOutlineDownload, HiOutlinePrinter } from 'react-icons/hi';
 
-export default function POSInvoice({ order, restaurant, onClose }) {
+/**
+ * POSInvoice — supports both the NEW structured response from the invoice API
+ *   { invoice, restaurant, items, totals, payment }
+ * and a LEGACY flat shape { order, restaurant } for backward compatibility.
+ */
+export default function POSInvoice({ data, order: legacyOrder, restaurant: legacyRestaurant, onClose }) {
     const invoiceRef = useRef(null);
+
+    // ── Normalise props (new structure vs legacy) ──────────────────────────────
+    const inv        = data?.invoice   ?? null;
+    const restaurant = data?.restaurant ?? legacyRestaurant ?? null;
+    const items      = data?.items     ?? legacyOrder?.items ?? [];
+    const totals     = data?.totals    ?? null;
+    const payment    = data?.payment   ?? null;
+
+    // Derive display values — prefer new structured fields, fall back to legacy
+    const orderNumber    = inv?.order_number   ?? legacyOrder?.order_number;
+    const invoiceNumber  = inv?.invoice_number ?? legacyOrder?.invoice_number ?? null;
+    const orderDate      = inv?.date           ?? legacyOrder?.created_at;
+    const orderType      = legacyOrder?.type   ?? '';
+    const tableName      = legacyOrder?.table?.table_number ?? null;
+    const customerName   = legacyOrder?.customer_name ?? null;
+    const customerPhone  = legacyOrder?.customer_phone ?? null;
+
+    const subtotal   = parseFloat(totals?.subtotal    ?? legacyOrder?.subtotal   ?? 0);
+    const discount   = parseFloat(totals?.discount    ?? legacyOrder?.discount   ?? 0);
+    const netAmount  = parseFloat(totals?.net_amount  ?? legacyOrder?.net_amount ?? 0);
+    const vatRate    = parseFloat(totals?.vat_rate     ?? legacyOrder?.vat_rate   ?? 0);
+    const vatAmount  = parseFloat(totals?.vat_amount   ?? legacyOrder?.vat_amount ?? legacyOrder?.tax ?? 0);
+    const grandTotal = parseFloat(totals?.grand_total  ?? legacyOrder?.grand_total ?? 0);
+
+    const payMethod  = payment?.method ?? legacyOrder?.payment_method ?? '';
+    const payStatus  = payment?.status ?? legacyOrder?.payment_status ?? '';
+    const isPaid     = payStatus === 'paid';
+    const txnId      = legacyOrder?.transaction_id ?? null;
+
+    const paymentLabelMap = {
+        cash: 'Cash',
+        card: 'Card / POS',
+        mobile_banking: 'Mobile Banking',
+        online: 'Online',
+    };
+    const paymentLabel = paymentLabelMap[payMethod] ?? payMethod;
 
     const handlePrint = () => {
         const content = invoiceRef.current;
@@ -14,7 +55,7 @@ export default function POSInvoice({ order, restaurant, onClose }) {
             <html>
             <head>
                 <meta charset="utf-8" />
-                <title>Invoice - ${order.order_number}</title>
+                <title>Invoice - ${orderNumber}</title>
                 <style>
                     * { margin: 0; padding: 0; box-sizing: border-box; }
                     body { font-family: 'Courier New', monospace; font-size: 12px; color: #000; width: 80mm; margin: 0 auto; padding: 8px; }
@@ -25,6 +66,7 @@ export default function POSInvoice({ order, restaurant, onClose }) {
                     .item-row { display: flex; justify-content: space-between; padding: 2px 0; }
                     .restaurant-name { font-size: 16px; font-weight: bold; }
                     .order-num { font-size: 14px; font-weight: bold; margin: 4px 0; }
+                    .inv-num { font-size: 11px; color: #444; margin-bottom: 2px; }
                     .total-row { font-size: 14px; font-weight: bold; }
                     .footer { font-size: 10px; color: #666; margin-top: 8px; }
                     .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
@@ -51,16 +93,7 @@ export default function POSInvoice({ order, restaurant, onClose }) {
         }, 250);
     };
 
-    if (!order) return null;
-
-    const isPaid = order.payment_status === 'paid';
-    const paymentLabelMap = {
-        cash: 'Cash',
-        card: 'Card / POS',
-        mobile_banking: 'Mobile Banking',
-        online: 'Online',
-    };
-    const paymentLabel = paymentLabelMap[order.payment_method] ?? order.payment_method;
+    if (!orderNumber) return null;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
@@ -94,30 +127,44 @@ export default function POSInvoice({ order, restaurant, onClose }) {
                         {restaurant?.phone && (
                             <div style={{ fontSize: '11px', color: '#666' }}>Tel: {restaurant.phone}</div>
                         )}
+                        {restaurant?.vat_number && (
+                            <div style={{ fontSize: '11px', color: '#444', marginTop: '2px', fontWeight: 'bold' }}>
+                                BIN/VAT: {restaurant.vat_number}
+                            </div>
+                        )}
                     </div>
 
                     <div className="divider" style={{ borderTop: '1px dashed #000', margin: '8px 0' }}></div>
 
-                    {/* Order Info */}
+                    {/* Order / Invoice Info */}
                     <div style={{ textAlign: 'center' }}>
+                        {invoiceNumber && (
+                            <div className="inv-num" style={{ fontSize: '11px', color: '#444', marginBottom: '2px' }}>
+                                Invoice: {invoiceNumber}
+                            </div>
+                        )}
                         <div className="order-num" style={{ fontSize: '14px', fontWeight: 'bold' }}>
-                            {order.order_number}
+                            {orderNumber}
                         </div>
                         <div style={{ fontSize: '11px', color: '#666', display: 'flex', justifyContent: 'center', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
-                            <span style={{ textTransform: 'capitalize' }}>{order.type === 'dine' ? 'Dine-in' : 'Takeaway'}</span>
-                            {order.table && <span>| Table {order.table.table_number}</span>}
-                            <span>| {new Date(order.created_at).toLocaleString()}</span>
+                            {orderType && (
+                                <span style={{ textTransform: 'capitalize' }}>
+                                    {orderType === 'dine' ? 'Dine-in' : orderType === 'parcel' ? 'Takeaway' : orderType}
+                                </span>
+                            )}
+                            {tableName && <span>| Table {tableName}</span>}
+                            {orderDate && <span>| {new Date(orderDate).toLocaleString()}</span>}
                         </div>
                     </div>
 
                     <div className="divider" style={{ borderTop: '1px dashed #000', margin: '8px 0' }}></div>
 
                     {/* Customer */}
-                    {(order.customer_name || order.customer_phone) && (
+                    {(customerName || customerPhone) && (
                         <>
                             <div style={{ fontSize: '11px' }}>
-                                {order.customer_name && <div>Customer: {order.customer_name}</div>}
-                                {order.customer_phone && <div>Phone: {order.customer_phone}</div>}
+                                {customerName && <div>Customer: {customerName}</div>}
+                                {customerPhone && <div>Phone: {customerPhone}</div>}
                             </div>
                             <div className="divider" style={{ borderTop: '1px dashed #000', margin: '8px 0' }}></div>
                         </>
@@ -129,10 +176,10 @@ export default function POSInvoice({ order, restaurant, onClose }) {
                             <span>Item</span>
                             <span>Total</span>
                         </div>
-                        {order.items?.map((item) => (
-                            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: '12px' }}>
-                                <span>{item.qty}x {item.menu_item?.name || 'Item'}</span>
-                                <span>৳{parseFloat(item.line_total).toFixed(2)}</span>
+                        {items.map((item, idx) => (
+                            <div key={item.id ?? idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: '12px' }}>
+                                <span>{item.qty}x {item.name ?? item.menu_item?.name ?? 'Item'}</span>
+                                <span>৳{parseFloat(item.line_total ?? item.unit_price * item.qty).toFixed(2)}</span>
                             </div>
                         ))}
                     </div>
@@ -143,24 +190,30 @@ export default function POSInvoice({ order, restaurant, onClose }) {
                     <div style={{ fontSize: '12px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1px 0' }}>
                             <span>Subtotal</span>
-                            <span>৳{parseFloat(order.subtotal).toFixed(2)}</span>
+                            <span>৳{subtotal.toFixed(2)}</span>
                         </div>
-                        {parseFloat(order.discount) > 0 && (
+                        {discount > 0 && (
                             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1px 0', color: '#16a34a' }}>
                                 <span>Discount</span>
-                                <span>-৳{parseFloat(order.discount).toFixed(2)}</span>
+                                <span>-৳{discount.toFixed(2)}</span>
                             </div>
                         )}
-                        {parseFloat(order.tax) > 0 && (
+                        {netAmount > 0 && netAmount !== subtotal - discount && (
                             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1px 0' }}>
-                                <span>Tax</span>
-                                <span>৳{parseFloat(order.tax).toFixed(2)}</span>
+                                <span>Net Amount</span>
+                                <span>৳{netAmount.toFixed(2)}</span>
+                            </div>
+                        )}
+                        {vatAmount > 0 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1px 0' }}>
+                                <span>VAT ({vatRate}%)</span>
+                                <span>৳{vatAmount.toFixed(2)}</span>
                             </div>
                         )}
                         <div className="divider" style={{ borderTop: '1px dashed #000', margin: '6px 0' }}></div>
                         <div className="total-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 'bold' }}>
                             <span>TOTAL</span>
-                            <span>৳{parseFloat(order.grand_total).toFixed(2)}</span>
+                            <span>৳{grandTotal.toFixed(2)}</span>
                         </div>
                     </div>
 
@@ -169,16 +222,18 @@ export default function POSInvoice({ order, restaurant, onClose }) {
                     {/* Payment Info */}
                     <div style={{ textAlign: 'center', fontSize: '12px' }}>
                         <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                            <span className={`badge ${order.payment_method === 'cash' ? 'badge-cash' : 'badge-online'}`}
-                                style={{
-                                    display: 'inline-block', padding: '2px 8px', borderRadius: '4px',
-                                    fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase',
-                                    background: order.payment_method === 'cash' ? '#e0f2fe' : order.payment_method === 'card' ? '#ede9fe' : '#f0fdf4',
-                                    color: order.payment_method === 'cash' ? '#075985' : order.payment_method === 'card' ? '#5b21b6' : '#166534',
-                                }}>
-                                {paymentLabel}
-                            </span>
-                            <span className={`badge ${isPaid ? 'badge-paid' : 'badge-pending'}`}
+                            {payMethod && (
+                                <span
+                                    style={{
+                                        display: 'inline-block', padding: '2px 8px', borderRadius: '4px',
+                                        fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase',
+                                        background: payMethod === 'cash' ? '#e0f2fe' : payMethod === 'card' ? '#ede9fe' : '#f0fdf4',
+                                        color: payMethod === 'cash' ? '#075985' : payMethod === 'card' ? '#5b21b6' : '#166534',
+                                    }}>
+                                    {paymentLabel}
+                                </span>
+                            )}
+                            <span
                                 style={{
                                     display: 'inline-block', padding: '2px 8px', borderRadius: '4px',
                                     fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase',
@@ -188,9 +243,9 @@ export default function POSInvoice({ order, restaurant, onClose }) {
                                 {isPaid ? 'PAID' : 'UNPAID'}
                             </span>
                         </div>
-                        {order.transaction_id && (
+                        {txnId && (
                             <div style={{ fontSize: '10px', color: '#666', marginTop: '4px' }}>
-                                TXN: {order.transaction_id}
+                                TXN: {txnId}
                             </div>
                         )}
                     </div>
@@ -200,9 +255,9 @@ export default function POSInvoice({ order, restaurant, onClose }) {
                     {/* Footer */}
                     <div className="footer" style={{ textAlign: 'center', fontSize: '10px', color: '#666', marginTop: '8px' }}>
                         <p>Thank you for your order!</p>
-                        {order.payment_method === 'cash' && !isPaid && (
+                        {payMethod === 'cash' && !isPaid && (
                             <p style={{ marginTop: '4px', fontWeight: 'bold', color: '#92400e' }}>
-                                Please pay ৳{parseFloat(order.grand_total).toFixed(2)} at the counter
+                                Please pay ৳{grandTotal.toFixed(2)} at the counter
                             </p>
                         )}
                     </div>

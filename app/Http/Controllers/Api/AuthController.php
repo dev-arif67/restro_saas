@@ -95,19 +95,14 @@ class AuthController extends BaseApiController
     protected function respondWithToken(string $token, int $code = 200): JsonResponse
     {
         $user = auth()->user();
+        $user->load('tenant');
 
         return response()->json([
             'success' => true,
             'access_token' => $token,
             'token_type' => 'bearer',
             'expires_in' => config('jwt.ttl') * 60,
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->role,
-                'tenant_id' => $user->tenant_id,
-            ],
+            'user' => $user,
         ], $code);
     }
 }

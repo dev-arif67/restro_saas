@@ -27,8 +27,9 @@ class ReportController extends BaseApiController
 
         $totalSales = (clone $orders)->sum('grand_total');
         $totalOrders = (clone $orders)->count();
-        $totalTax = (clone $orders)->sum('tax');
+        $totalTax = (clone $orders)->sum('vat_amount');
         $totalDiscount = (clone $orders)->sum('discount');
+        $totalNetAmount = (clone $orders)->sum('net_amount');
         $avgOrderValue = $totalOrders > 0 ? round($totalSales / $totalOrders, 2) : 0;
 
         $dineInSales = (clone $orders)->dineIn()->sum('grand_total');
@@ -40,7 +41,8 @@ class ReportController extends BaseApiController
                 DB::raw('DATE(created_at) as date'),
                 DB::raw('COUNT(*) as orders'),
                 DB::raw('SUM(grand_total) as revenue'),
-                DB::raw('SUM(tax) as tax'),
+                DB::raw('SUM(vat_amount) as vat'),
+                DB::raw('SUM(net_amount) as net_amount'),
                 DB::raw('SUM(discount) as discounts')
             )
             ->groupBy('date')
@@ -52,7 +54,8 @@ class ReportController extends BaseApiController
             'summary' => [
                 'total_sales' => $totalSales,
                 'total_orders' => $totalOrders,
-                'total_tax' => $totalTax,
+                'total_vat' => $totalTax,
+                'total_net_amount' => $totalNetAmount,
                 'total_discount' => $totalDiscount,
                 'avg_order_value' => $avgOrderValue,
                 'dine_in_sales' => $dineInSales,

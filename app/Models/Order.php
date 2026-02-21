@@ -19,10 +19,14 @@ class Order extends Model
         'table_id',
         'voucher_id',
         'order_number',
+        'invoice_number',
         'customer_name',
         'customer_phone',
         'subtotal',
         'discount',
+        'net_amount',
+        'vat_rate',
+        'vat_amount',
         'tax',
         'grand_total',
         'type',
@@ -43,6 +47,9 @@ class Order extends Model
         return [
             'subtotal' => 'decimal:2',
             'discount' => 'decimal:2',
+            'net_amount' => 'decimal:2',
+            'vat_rate' => 'decimal:2',
+            'vat_amount' => 'decimal:2',
             'tax' => 'decimal:2',
             'grand_total' => 'decimal:2',
             'paid_at' => 'datetime',
@@ -170,16 +177,24 @@ class Order extends Model
             $discount = $this->voucher->calculateDiscount($subtotal);
         }
 
-        $afterDiscount = $subtotal - $discount;
         $tenant = $this->tenant;
-        $tax = round($afterDiscount * ($tenant->tax_rate / 100), 2);
-        $grandTotal = $afterDiscount + $tax;
+        $vatService = app(\App\Services\VatCalculationService::class);
+
+        $items = $this->items->map(fn ($item) => [
+            'price' => $item->price_at_sale,
+            'qty'   => $item->qty,
+        ])->all();
+
+        $totals = $vatService->calculate($items, $tenant, $discount);
 
         $this->update([
-            'subtotal' => $subtotal,
-            'discount' => $discount,
-            'tax' => $tax,
-            'grand_total' => $grandTotal,
+            'subtotal'   => $totals['subtotal'],
+            'discount'   => $totals['discount'],
+            'net_amount' => $totals['net_amount'],
+            'vat_rate'   => $totals['vat_rate'],
+            'vat_amount' => $totals['vat_amount'],
+            'tax'        => $totals['vat_amount'],
+            'grand_total' => $totals['grand_total'],
         ]);
     }
 }

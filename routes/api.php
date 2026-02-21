@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\AnnouncementController;
+use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BrandingController;
 use App\Http\Controllers\Api\CategoryController;
@@ -10,14 +12,17 @@ use App\Http\Controllers\Api\KitchenController;
 use App\Http\Controllers\Api\MenuItemController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\PlanController;
 use App\Http\Controllers\Api\PlatformSettingController;
 use App\Http\Controllers\Api\PosOrderController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SettlementController;
 use App\Http\Controllers\Api\SubscriptionController;
+use App\Http\Controllers\Api\SystemController;
 use App\Http\Controllers\Api\TableController;
 use App\Http\Controllers\Api\TenantController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\VatReportController;
 use App\Http\Controllers\Api\VoucherController;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
@@ -36,6 +41,9 @@ Route::prefix('auth')->group(function () {
 
 // Platform branding (public, no auth)
 Route::get('platform/branding', [PlatformSettingController::class, 'branding']);
+
+// Public subscription plans (for registration page)
+Route::get('plans', [PlanController::class, 'index']);
 
 // Contact / Enquiry (public)
 Route::post('contact', [ContactController::class, 'store']);
@@ -139,6 +147,10 @@ Route::middleware(['auth:api'])->group(function () {
             Route::get('top-items', [ReportController::class, 'topSellingItems']);
             Route::get('revenue-comparison', [ReportController::class, 'revenueComparison']);
             Route::get('settlements', [ReportController::class, 'settlementReport']);
+
+            // VAT Reports
+            Route::get('vat/daily', [VatReportController::class, 'dailyZReport']);
+            Route::get('vat/monthly', [VatReportController::class, 'monthlyVatReport']);
         });
 
         // Settlements
@@ -188,6 +200,15 @@ Route::middleware(['auth:api'])->group(function () {
         Route::get('all-settlements', [SettlementController::class, 'allSettlements']);
         Route::post('settlements/{id}/payment', [SettlementController::class, 'addPayment']);
 
+        // Admin Settlements (enhanced)
+        Route::prefix('settlements')->group(function () {
+            Route::get('/', [\App\Http\Controllers\AdminSettlementController::class, 'index']);
+            Route::get('stats', [\App\Http\Controllers\AdminSettlementController::class, 'stats']);
+            Route::get('export', [\App\Http\Controllers\AdminSettlementController::class, 'export']);
+            Route::get('{settlement}', [\App\Http\Controllers\AdminSettlementController::class, 'show']);
+            Route::post('{settlement}/payment', [\App\Http\Controllers\AdminSettlementController::class, 'recordPayment']);
+        });
+
         // Platform Settings / Branding
         Route::prefix('settings')->group(function () {
             Route::get('/', [PlatformSettingController::class, 'index']);
@@ -195,12 +216,57 @@ Route::middleware(['auth:api'])->group(function () {
         });
 
         // Contact Enquiries (super admin)
-        Route::get('enquiries', [ContactController::class, 'index']);
-        Route::get('enquiries/{id}', [ContactController::class, 'show']);
-        Route::patch('enquiries/{id}/status', [ContactController::class, 'updateStatus']);
-        Route::delete('enquiries/{id}', [ContactController::class, 'destroy']);
+        Route::prefix('enquiries')->group(function () {
+            Route::get('/', [\App\Http\Controllers\EnquiryController::class, 'index']);
+            Route::get('{enquiry}', [\App\Http\Controllers\EnquiryController::class, 'show']);
+            Route::patch('{enquiry}/read', [\App\Http\Controllers\EnquiryController::class, 'markRead']);
+            Route::patch('{enquiry}/status', [\App\Http\Controllers\EnquiryController::class, 'updateStatus']);
+            Route::post('{enquiry}/reply', [\App\Http\Controllers\EnquiryController::class, 'reply']);
+            Route::delete('{enquiry}', [\App\Http\Controllers\EnquiryController::class, 'destroy']);
+        });
+
+        // Advanced Tenant Management
+        Route::get('tenants/{id}/stats', [TenantController::class, 'stats']);
+        Route::post('tenants/{id}/impersonate', [TenantController::class, 'impersonate']);
+        Route::post('tenants/{id}/send-email', [TenantController::class, 'sendEmail']);
+        Route::post('tenants/bulk-action', [TenantController::class, 'bulkAction']);
+        Route::get('tenants/export', [TenantController::class, 'export']);
+
+        // Advanced Subscription Management
+        Route::get('subscriptions/expiring-soon', [SubscriptionController::class, 'expiringSoon']);
+        Route::post('subscriptions/{id}/extend', [SubscriptionController::class, 'extend']);
+        Route::post('subscriptions/{tenantId}/renew', [SubscriptionController::class, 'renewManual']);
+
+        // Subscription Plans
+        Route::apiResource('plans', PlanController::class);
+
+        // Announcements
+        Route::apiResource('announcements', AnnouncementController::class);
+        Route::post('announcements/{id}/send', [AnnouncementController::class, 'send']);
+
+        // System Management
+        Route::prefix('system')->group(function () {
+            Route::get('health', [SystemController::class, 'health']);
+            Route::get('info', [SystemController::class, 'info']);
+            Route::get('queue-stats', [SystemController::class, 'queueStats']);
+            Route::post('retry-failed-jobs', [SystemController::class, 'retryFailedJobs']);
+            Route::post('clear-cache', [SystemController::class, 'clearCache']);
+            Route::get('logs', [SystemController::class, 'logs']);
+        });
+
+        // Audit Logs
+        Route::prefix('audit-logs')->group(function () {
+            Route::get('/', [AuditLogController::class, 'index']);
+            Route::get('actions', [AuditLogController::class, 'actions']);
+            Route::get('stats', [AuditLogController::class, 'stats']);
+            Route::get('export', [AuditLogController::class, 'export']);
+            Route::get('{id}', [AuditLogController::class, 'show']);
+        });
     });
 
+    // Active Announcements (for tenant dashboard)
+    Route::get('announcements/active', [AnnouncementController::class, 'active']);
+    Route::post('announcements/{id}/read', [AnnouncementController::class, 'markAsRead']);
 
 });
 Route::get('/clear-cache', function () {
