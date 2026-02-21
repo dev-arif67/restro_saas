@@ -106,7 +106,7 @@ export default function LandingPage() {
                         {logoSrc ? (
                             <img src={logoSrc} alt={platformName} className="h-16" />
                         ) : (
-                            <span className="text-xl font-bold text-blue-600" style={colors.success}>{platformName}</span>
+                            <span className="text-xl font-bold text-blue-600" >{platformName}</span>
                         )}
                     </Link>
                     <div className="flex items-center gap-3">
