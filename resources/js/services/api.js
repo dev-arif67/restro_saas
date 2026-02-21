@@ -173,11 +173,17 @@ export const customerAPI = {
     table: (slug, tableId) => api.get(`/customer/restaurant/${slug}/table/${tableId}`),
     placeOrder: (slug, data) => api.post(`/customer/restaurant/${slug}/order`, data),
     validateVoucher: (slug, code, subtotal = 0) => api.post('/customer/voucher/validate', { tenant_slug: slug, code, subtotal }),
+    initiatePayment: (orderNumber) => api.post('/payment/sslcommerz/initiate', { order_number: orderNumber }),
 };
 
 // POS Terminal
 export const posAPI = {
     createOrder: (data) => api.post('/pos/orders', data),
+};
+
+// Contact (public)
+export const contactAPI = {
+    submit: (data) => api.post('/contact', data),
 };
 
 // Admin
@@ -204,5 +210,11 @@ export const adminAPI = {
         update: (data) => api.post('/admin/settings', data, {
             headers: { 'Content-Type': 'multipart/form-data' },
         }),
+    },
+    enquiries: {
+        list: (params) => api.get('/admin/enquiries', { params }),
+        show: (id) => api.get(`/admin/enquiries/${id}`),
+        updateStatus: (id, status) => api.patch(`/admin/enquiries/${id}/status`, { status }),
+        delete: (id) => api.delete(`/admin/enquiries/${id}`),
     },
 };

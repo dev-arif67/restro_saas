@@ -34,6 +34,9 @@ const CustomerMenuPage = lazy(() => import('./pages/customer/CustomerMenuPage'))
 const CustomerCartPage = lazy(() => import('./pages/customer/CustomerCartPage'));
 const OrderTrackingPage = lazy(() => import('./pages/customer/OrderTrackingPage'));
 
+// Landing
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+
 // Admin
 const TenantsPage = lazy(() => import('./pages/admin/TenantsPage'));
 const SubscriptionsPage = lazy(() => import('./pages/admin/SubscriptionsPage'));
@@ -108,9 +111,9 @@ export default function App() {
                 </Route>
                 <Route path="/order/:orderNumber" element={<OrderTrackingPage />} />
 
-                {/* Default redirect */}
-                <Route path="/" element={<Navigate to="/login" replace />} />
-                <Route path="*" element={<Navigate to="/login" replace />} />
+                {/* Landing Page */}
+                <Route path="/" element={<LandingPage />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
         </Suspense>
     );

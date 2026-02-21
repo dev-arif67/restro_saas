@@ -5,6 +5,7 @@ import { customerAPI } from '../../services/api';
 import { useCartStore } from '../../stores/cartStore';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import toast from 'react-hot-toast';
+import { HiOutlineSearch, HiOutlineShoppingCart, HiOutlineX } from 'react-icons/hi';
 
 export default function CustomerMenuPage() {
     const { slug } = useParams();
@@ -12,7 +13,9 @@ export default function CustomerMenuPage() {
     const { restaurant } = useOutletContext() || {};
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [searchText, setSearchText] = useState('');
-    const { addItem, items: cartItems } = useCartStore();
+    const { addItem, updateQty, items: cartItems } = useCartStore();
+
+    const primaryColor = restaurant?.primary_color || '#3B82F6';
 
     const { data: menu, isLoading } = useQuery({
         queryKey: ['customer-menu', slug],
@@ -20,8 +23,13 @@ export default function CustomerMenuPage() {
     });
 
     const handleAdd = (item) => {
-        addItem(item);
-        toast.success(`${item.name} added to cart`, { duration: 1500, icon: '🛒' });
+        const existing = cartItems.find((c) => c.menu_item_id === item.id);
+        if (existing) {
+            updateQty(item.id, existing.qty + 1);
+        } else {
+            addItem(item);
+        }
+        toast.success(`${item.name} added`, { duration: 1200, icon: '🛒', style: { fontSize: '14px' } });
     };
 
     if (isLoading) return <LoadingSpinner />;
@@ -38,82 +46,135 @@ export default function CustomerMenuPage() {
         : filteredItems;
 
     const cartCount = cartItems.reduce((s, i) => s + i.qty, 0);
+    const cartTotal = useCartStore.getState().getSubtotal();
 
     return (
-        <div>
-            {/* Search */}
-            <div className="mb-4">
-                <input
-                    type="text"
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                    placeholder="Search menu..."
-                    value={searchText}
-                    onChange={(e) => setSearchText(e.target.value)}
-                />
+        <div className="pb-28">
+            {/* Search bar */}
+            <div className="sticky top-[60px] z-30 bg-gray-50 px-3 pt-3 pb-2">
+                <div className="relative">
+                    <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input
+                        type="text"
+                        className="w-full pl-10 pr-10 py-3 rounded-xl border border-gray-200 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none text-sm shadow-sm"
+                        placeholder="Search menu items..."
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                    />
+                    {searchText && (
+                        <button onClick={() => setSearchText('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                            <HiOutlineX className="w-5 h-5" />
+                        </button>
+                    )}
+                </div>
             </div>
 
-            {/* Category Tabs */}
-            <div className="flex gap-2 overflow-x-auto pb-3 mb-4 scrollbar-hide">
-                <button
-                    onClick={() => setSelectedCategory(null)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${!selectedCategory ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}
-                >
-                    All ({allItems.length})
-                </button>
-                {categories.map((cat) => (
+            {/* Category Tabs - horizontal scroll */}
+            <div className="sticky top-[120px] z-20 bg-gray-50 px-3 pb-2">
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
                     <button
-                        key={cat.id}
-                        onClick={() => setSelectedCategory(cat.id)}
-                        className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${selectedCategory === cat.id ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}
+                        onClick={() => setSelectedCategory(null)}
+                        className="px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all shadow-sm"
+                        style={!selectedCategory ? { backgroundColor: primaryColor, color: '#fff' } : { backgroundColor: '#f3f4f6', color: '#4b5563' }}
                     >
-                        {cat.name} ({cat.menu_items?.length || 0})
+                        All ({allItems.length})
                     </button>
-                ))}
+                    {categories.map((cat) => (
+                        <button
+                            key={cat.id}
+                            onClick={() => setSelectedCategory(cat.id)}
+                            className="px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all shadow-sm"
+                            style={selectedCategory === cat.id ? { backgroundColor: primaryColor, color: '#fff' } : { backgroundColor: '#f3f4f6', color: '#4b5563' }}
+                        >
+                            {cat.name} ({cat.menu_items?.length || 0})
+                        </button>
+                    ))}
+                </div>
             </div>
 
-            {/* Items Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-24">
-                {displayItems.map((item) => {
-                    const inCart = cartItems.find((c) => c.menu_item_id === item.id);
-                    const imgSrc = item.image_url || (item.image ? `/storage/${item.image}` : null);
-                    return (
-                        <div key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-                            {imgSrc ? (
-                                <div className="w-full h-36 bg-gray-100">
-                                    <img src={imgSrc} alt={item.name} className="w-full h-full object-cover" />
-                                </div>
-                            ) : null}
-                            <div className="p-4 flex justify-between items-start flex-1">
-                                <div className="flex-1 mr-3">
-                                    <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                                    {item.description && <p className="text-sm text-gray-400 mt-1 line-clamp-2">{item.description}</p>}
-                                    <p className="text-lg font-bold text-blue-600 mt-2">৳{item.price}</p>
-                                </div>
-                                <button
-                                    onClick={() => handleAdd(item)}
-                                    className="flex-shrink-0 w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center text-xl hover:bg-blue-700 transition relative"
-                                >
-                                    +
-                                    {inCart && (
-                                        <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center">
-                                            {inCart.qty}
-                                        </span>
+            {/* Items count when searching */}
+            {searchText && (
+                <div className="px-3 pt-1 pb-2">
+                    <p className="text-xs text-gray-500">{displayItems.length} items found for "{searchText}"</p>
+                </div>
+            )}
+
+            {/* Items Grid - always 2 columns on mobile */}
+            <div className="px-3 pt-1">
+                {displayItems.length === 0 ? (
+                    <div className="text-center py-16">
+                        <HiOutlineSearch className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-400 font-medium">No items found</p>
+                        <p className="text-gray-300 text-sm mt-1">Try a different search term</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                        {displayItems.map((item) => {
+                            const inCart = cartItems.find((c) => c.menu_item_id === item.id);
+                            const imgSrc = item.image_url || (item.image ? `/storage/${item.image}` : null);
+                            return (
+                                <div key={item.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col transition-transform active:scale-[0.98]">
+                                    {imgSrc ? (
+                                        <div className="w-full aspect-[4/3] bg-gray-100 relative overflow-hidden">
+                                            <img src={imgSrc} alt={item.name} className="w-full h-full object-cover" loading="lazy" />
+                                            {inCart && (
+                                                <div className="absolute top-2 right-2 w-6 h-6 rounded-full text-white text-xs font-bold flex items-center justify-center shadow-md" style={{ backgroundColor: primaryColor }}>
+                                                    {inCart.qty}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="w-full aspect-[4/3] bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center relative">
+                                            <span className="text-3xl">🍽️</span>
+                                            {inCart && (
+                                                <div className="absolute top-2 right-2 w-6 h-6 rounded-full text-white text-xs font-bold flex items-center justify-center shadow-md" style={{ backgroundColor: primaryColor }}>
+                                                    {inCart.qty}
+                                                </div>
+                                            )}
+                                        </div>
                                     )}
-                                </button>
-                            </div>
-                        </div>
-                    );
-                })}
+                                    <div className="p-3 flex flex-col flex-1">
+                                        <h3 className="font-semibold text-gray-900 text-sm leading-tight line-clamp-2">{item.name}</h3>
+                                        {item.description && (
+                                            <p className="text-xs text-gray-400 mt-1 line-clamp-1">{item.description}</p>
+                                        )}
+                                        <div className="mt-auto pt-2 flex items-center justify-between">
+                                            <p className="text-base font-bold" style={{ color: primaryColor }}>৳{parseFloat(item.price).toFixed(0)}</p>
+                                            <button
+                                                onClick={() => handleAdd(item)}
+                                                className="w-8 h-8 rounded-full text-white flex items-center justify-center text-lg shadow-md transition-all active:scale-90 hover:shadow-lg"
+                                                style={{ backgroundColor: primaryColor }}
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
 
-            {/* Floating Cart Button */}
+            {/* Floating Cart Bar */}
             {cartCount > 0 && (
-                <div className="fixed bottom-6 left-4 right-4 max-w-lg mx-auto">
-                    <Link to={`/restaurant/${slug}/cart?${searchParams.toString()}`}
-                       className="flex items-center justify-between bg-blue-600 text-white rounded-2xl py-4 px-6 shadow-lg">
-                        <span className="font-medium">{cartCount} items</span>
-                        <span className="font-bold text-lg">View Cart</span>
-                        <span className="font-bold">৳{useCartStore.getState().getSubtotal()}</span>
+                <div className="fixed bottom-4 left-3 right-3 max-w-lg mx-auto z-50">
+                    <Link
+                        to={`/restaurant/${slug}/cart?${searchParams.toString()}`}
+                        className="flex items-center justify-between rounded-2xl py-3.5 px-5 shadow-xl text-white transition-all active:scale-[0.98]"
+                        style={{ backgroundColor: primaryColor }}
+                    >
+                        <div className="flex items-center gap-2">
+                            <div className="relative">
+                                <HiOutlineShoppingCart className="w-5 h-5" />
+                                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-white rounded-full text-[10px] font-bold flex items-center justify-center" style={{ color: primaryColor }}>
+                                    {cartCount}
+                                </span>
+                            </div>
+                            <span className="font-medium text-sm">{cartCount} {cartCount === 1 ? 'item' : 'items'}</span>
+                        </div>
+                        <span className="font-bold text-sm">View Cart</span>
+                        <span className="font-bold text-sm">৳{cartTotal.toFixed(0)}</span>
                     </Link>
                 </div>
             )}

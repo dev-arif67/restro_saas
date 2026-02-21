@@ -3,11 +3,13 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BrandingController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\KitchenController;
 use App\Http\Controllers\Api\MenuItemController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PlatformSettingController;
 use App\Http\Controllers\Api\PosOrderController;
 use App\Http\Controllers\Api\ReportController;
@@ -28,11 +30,15 @@ use Illuminate\Support\Facades\Route;
 
 // Authentication
 Route::prefix('auth')->group(function () {
+    Route::post('register', [AuthController::class, 'register']);
     Route::post('login', [AuthController::class, 'login']);
 });
 
 // Platform branding (public, no auth)
 Route::get('platform/branding', [PlatformSettingController::class, 'branding']);
+
+// Contact / Enquiry (public)
+Route::post('contact', [ContactController::class, 'store']);
 
 // Customer-facing (public, no auth required)
 Route::prefix('customer')->group(function () {
@@ -52,6 +58,15 @@ Route::prefix('customer')->group(function () {
 
     // Invoice (public)
     Route::get('order/{orderNumber}/invoice', [OrderController::class, 'invoice']);
+});
+
+// SSLCommerz Payment Routes (public, callbacks from gateway)
+Route::prefix('payment/sslcommerz')->group(function () {
+    Route::post('initiate', [PaymentController::class, 'initiate']);
+    Route::post('success', [PaymentController::class, 'handleSuccess']);
+    Route::post('fail', [PaymentController::class, 'handleFail']);
+    Route::post('cancel', [PaymentController::class, 'handleCancel']);
+    Route::post('ipn', [PaymentController::class, 'ipn']);
 });
 
 /*
@@ -178,6 +193,12 @@ Route::middleware(['auth:api'])->group(function () {
             Route::get('/', [PlatformSettingController::class, 'index']);
             Route::post('/', [PlatformSettingController::class, 'update']);
         });
+
+        // Contact Enquiries (super admin)
+        Route::get('enquiries', [ContactController::class, 'index']);
+        Route::get('enquiries/{id}', [ContactController::class, 'show']);
+        Route::patch('enquiries/{id}/status', [ContactController::class, 'updateStatus']);
+        Route::delete('enquiries/{id}', [ContactController::class, 'destroy']);
     });
 
 

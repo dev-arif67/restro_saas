@@ -89,7 +89,7 @@ class VoucherController extends BaseApiController
             'tenant_slug' => 'nullable|string',
         ]);
 
-        // Resolve tenant by ID or slug
+        // Resolve tenant by ID, slug, or authenticated user
         $tenantId = $request->tenant_id;
         if (!$tenantId && $request->tenant_slug) {
             $tenant = \App\Models\Tenant::where('slug', $request->tenant_slug)->first();
@@ -97,6 +97,11 @@ class VoucherController extends BaseApiController
                 return $this->error('Restaurant not found', 404);
             }
             $tenantId = $tenant->id;
+        }
+
+        // Fallback to authenticated user's tenant
+        if (!$tenantId && auth()->check()) {
+            $tenantId = auth()->user()->tenant_id;
         }
 
         if (!$tenantId) {

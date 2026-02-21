@@ -143,9 +143,10 @@ export default function POSPage() {
             const res = await voucherAPI.validate({
                 code: voucherInput.trim(),
                 subtotal: totals.subtotal,
+                tenant_id: user?.tenant?.id,
             });
             const v = res.data?.data;
-            store.setVoucher(voucherInput.trim(), v?.discount ?? 0, v?.voucher_id ?? null);
+            store.setVoucher(voucherInput.trim(), v?.discount ?? 0, v?.voucher?.id ?? null);
             toast.success(`Voucher applied! -৳${(v?.discount ?? 0).toFixed(2)}`);
         } catch {
             toast.error('Invalid or expired voucher code');

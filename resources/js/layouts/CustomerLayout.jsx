@@ -1,11 +1,20 @@
-import React, { useEffect, useRef } from 'react';
-import { Outlet, useParams, useSearchParams } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { Outlet, useParams, useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { customerAPI } from '../services/api';
 import { useCartStore } from '../stores/cartStore';
 import { useBrandingStore } from '../stores/brandingStore';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import PoweredBy from '../components/ui/PoweredBy';
+import { HiOutlineClock } from 'react-icons/hi';
+
+// Get recent orders from localStorage
+function getRecentOrders(slug) {
+    try {
+        const key = `recent_orders_${slug}`;
+        return JSON.parse(localStorage.getItem(key) || '[]');
+    } catch { return []; }
+}
 
 export default function CustomerLayout() {
     const { slug } = useParams();
@@ -14,9 +23,12 @@ export default function CustomerLayout() {
     const { branding } = useBrandingStore();
     const prevTitle = useRef(document.title);
     const prevFavicon = useRef(document.querySelector("link[rel~='icon']")?.href);
+    const [showRecentOrders, setShowRecentOrders] = useState(false);
 
     const tableId = searchParams.get('table');
     const orderType = searchParams.get('type') || (tableId ? 'dine' : 'parcel');
+
+    const recentOrders = getRecentOrders(slug);
 
     React.useEffect(() => {
         if (tableId) setTableId(parseInt(tableId));
@@ -28,14 +40,14 @@ export default function CustomerLayout() {
         queryFn: () => customerAPI.restaurant(slug).then((r) => r.data.data),
     });
 
+    const primaryColor = restaurant?.primary_color || '#3B82F6';
+
     // Set document title and favicon to restaurant's branding
     useEffect(() => {
         if (restaurant) {
-            // Title
             if (restaurant.name) {
                 document.title = restaurant.name;
             }
-            // Favicon
             if (restaurant.favicon) {
                 let link = document.querySelector("link[rel~='icon']");
                 if (!link) {
@@ -46,7 +58,6 @@ export default function CustomerLayout() {
                 link.href = '/storage/' + restaurant.favicon;
             }
         }
-        // Restore platform title/favicon on unmount
         return () => {
             document.title = prevTitle.current || branding.platform_name || 'RestaurantSaaS';
             const link = document.querySelector("link[rel~='icon']");
@@ -62,8 +73,9 @@ export default function CustomerLayout() {
         return (
             <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
                 <div className="text-center">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Restaurant Unavailable</h2>
-                    <p className="text-gray-500">This restaurant is currently not accepting orders.</p>
+                    <div className="text-5xl mb-4">🍽️</div>
+                    <h2 className="text-xl font-bold text-gray-800 mb-2">Restaurant Unavailable</h2>
+                    <p className="text-gray-500 text-sm">This restaurant is currently not accepting orders.</p>
                 </div>
             </div>
         );
@@ -72,27 +84,71 @@ export default function CustomerLayout() {
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
             {/* Header */}
-            <header className="bg-white shadow-sm sticky top-0 z-40" style={{ borderBottom: `3px solid ${restaurant?.primary_color || '#3B82F6'}` }}>
-                <div className="max-w-lg mx-auto px-4 py-3 flex items-center">
-                    {restaurant?.logo && (
-                        <img src={`/storage/${restaurant.logo}`} alt="" className="w-8 h-8 rounded-full mr-3 object-cover" />
-                    )}
-                    <div>
-                        <h1 className="text-lg font-bold text-gray-900">{restaurant?.name}</h1>
-                        {tableId && (
-                            <p className="text-xs text-gray-500">Table {tableId} &middot; Dine-in</p>
+            <header className="bg-white shadow-sm sticky top-0 z-40" style={{ borderBottom: `3px solid ${primaryColor}` }}>
+                <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
+                    <div className="flex items-center min-w-0">
+                        {restaurant?.logo && (
+                            <img src={`/storage/${restaurant.logo}`} alt="" className="w-8 h-8 rounded-full mr-3 object-cover flex-shrink-0" />
                         )}
-                        {!tableId && (
-                            <p className="text-xs text-gray-500">Takeaway Order</p>
-                        )}
+                        <div className="min-w-0">
+                            <h1 className="text-base font-bold text-gray-900 truncate">{restaurant?.name}</h1>
+                            {tableId ? (
+                                <p className="text-xs text-gray-500">Table {tableId} &middot; Dine-in</p>
+                            ) : (
+                                <p className="text-xs text-gray-500">Takeaway Order</p>
+                            )}
+                        </div>
                     </div>
+                    {/* Recent Orders Button */}
+                    {recentOrders.length > 0 && (
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowRecentOrders(!showRecentOrders)}
+                                className="p-2 rounded-full hover:bg-gray-100 transition relative"
+                                title="Recent orders"
+                            >
+                                <HiOutlineClock className="w-5 h-5 text-gray-600" />
+                                <span className="absolute top-1 right-1 w-2 h-2 rounded-full" style={{ backgroundColor: primaryColor }}></span>
+                            </button>
+
+                            {/* Dropdown */}
+                            {showRecentOrders && (
+                                <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setShowRecentOrders(false)} />
+                                    <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+                                        <div className="p-3 border-b border-gray-100">
+                                            <p className="text-xs font-semibold text-gray-500 uppercase">Recent Orders</p>
+                                        </div>
+                                        <div className="max-h-64 overflow-y-auto">
+                                            {recentOrders.slice(0, 5).map((order, i) => (
+                                                <Link
+                                                    key={i}
+                                                    to={`/order/${order.orderNumber}`}
+                                                    onClick={() => setShowRecentOrders(false)}
+                                                    className="flex items-center justify-between px-3 py-2.5 hover:bg-gray-50 transition"
+                                                >
+                                                    <div>
+                                                        <p className="text-sm font-medium text-gray-800">#{order.orderNumber}</p>
+                                                        <p className="text-[11px] text-gray-400">
+                                                            {new Date(order.placedAt).toLocaleDateString()} {new Date(order.placedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        </p>
+                                                    </div>
+                                                    <span className="text-xs font-medium" style={{ color: primaryColor }}>Track →</span>
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
                 </div>
             </header>
 
             {/* Banner Image */}
             {restaurant?.banner_image && (
                 <div className="max-w-lg mx-auto w-full">
-                    <img src={`/storage/${restaurant.banner_image}`} alt="" className="w-full h-40 object-cover" />
+                    <img src={`/storage/${restaurant.banner_image}`} alt="" className="w-full h-36 object-cover" />
                 </div>
             )}
 

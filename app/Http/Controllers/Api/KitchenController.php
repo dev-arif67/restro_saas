@@ -15,8 +15,8 @@ class KitchenController extends BaseApiController
     public function activeOrders(Request $request): JsonResponse
     {
         $orders = Order::with(['items.menuItem', 'table'])
-            ->whereIn('status', ['placed', 'confirmed', 'preparing', 'ready'])
-            ->orderByRaw("FIELD(status, 'placed', 'confirmed', 'preparing', 'ready')")
+            ->whereIn('status', ['confirmed', 'preparing', 'ready'])
+            ->orderByRaw("FIELD(status, 'confirmed', 'preparing', 'ready')")
             ->latest()
             ->get();
 
@@ -28,7 +28,7 @@ class KitchenController extends BaseApiController
      */
     public function ordersByStatus(string $status, Request $request): JsonResponse
     {
-        $validStatuses = ['placed', 'confirmed', 'preparing', 'ready', 'served'];
+        $validStatuses = ['confirmed', 'preparing', 'ready', 'served'];
 
         if (!in_array($status, $validStatuses)) {
             return $this->error('Invalid status', 422);

@@ -12,6 +12,7 @@ use App\Models\Order;
 use App\Models\RestaurantTable;
 use App\Models\Tenant;
 use App\Models\Voucher;
+use App\Services\SslCommerzService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -181,7 +182,44 @@ class OrderController extends BaseApiController
             // Broadcast new order event
             broadcast(new NewOrderCreated($order))->toOthers();
 
-            return $this->created($order, 'Order placed successfully');
+            // If online payment, initiate SSLCommerz
+            $paymentUrl = null;
+            if (($request->payment_method ?? 'cash') === 'online') {
+                $sslCommerz = app(SslCommerzService::class);
+                if ($sslCommerz->isEnabled()) {
+                    $tranId = 'ORDER-' . $order->order_number . '-' . time();
+                    $baseUrl = url('/');
+
+                    $result = $sslCommerz->initiatePayment([
+                        'amount'         => $order->grand_total,
+                        'currency'       => 'BDT',
+                        'tran_id'        => $tranId,
+                        'success_url'    => "{$baseUrl}/api/payment/sslcommerz/success",
+                        'fail_url'       => "{$baseUrl}/api/payment/sslcommerz/fail",
+                        'cancel_url'     => "{$baseUrl}/api/payment/sslcommerz/cancel",
+                        'ipn_url'        => "{$baseUrl}/api/payment/sslcommerz/ipn",
+                        'customer_name'  => $order->customer_name ?? 'Customer',
+                        'customer_phone' => $order->customer_phone ?? '01700000000',
+                        'product_name'   => "Order #{$order->order_number}",
+                        'num_items'      => count($orderItems),
+                    ]);
+
+                    if ($result['success']) {
+                        $order->update([
+                            'transaction_id'  => $tranId,
+                            'payment_gateway' => 'sslcommerz',
+                        ]);
+                        $paymentUrl = $result['gateway_url'];
+                    }
+                }
+            }
+
+            $responseData = $order->toArray();
+            if ($paymentUrl) {
+                $responseData['payment_url'] = $paymentUrl;
+            }
+
+            return $this->created($responseData, 'Order placed successfully');
         });
     }
 
