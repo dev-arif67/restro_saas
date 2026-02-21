@@ -32,14 +32,14 @@ export default defineConfig({
         }),
     ],
     root: 'resources/js',
-    base: '/build/',
+    base: '/',
     build: {
         outDir: '../../public/build',
         emptyOutDir: true,
         manifest: true,
     },
     server: {
-        // host: '192.168.0.165',
+        host: '192.168.0.165',
         port: 5173,
         proxy: {
             '/api': {

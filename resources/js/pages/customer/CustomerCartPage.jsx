@@ -13,6 +13,8 @@ import {
     HiOutlineUser,
     HiOutlinePhone,
     HiOutlineAnnotation,
+    HiOutlineClock,
+    HiOutlineDocumentText,
 } from 'react-icons/hi';
 
 // Helper: save recent orders to localStorage
@@ -210,7 +212,11 @@ export default function CustomerCartPage() {
                                 </button>
                             )}
                             <button
-                                onClick={() => setOrderType('parcel')}
+                                onClick={() => {
+                                    setOrderType('parcel');
+                                    // Reset to cash if pay_later was selected (not available for parcel)
+                                    if (paymentMethod === 'pay_later') setPaymentMethod('cash');
+                                }}
                                 className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all"
                                 style={orderType === 'parcel' ? { backgroundColor: primaryColor, color: '#fff' } : { backgroundColor: '#f3f4f6', color: '#6b7280' }}
                             >
@@ -303,62 +309,96 @@ export default function CustomerCartPage() {
                     {/* Payment Method */}
                     <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-3">
                         <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 block">Payment Method</label>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className={`grid gap-3 ${orderType === 'dine' ? 'grid-cols-3' : 'grid-cols-2'}`}>
                             <button
                                 onClick={() => setPaymentMethod('cash')}
-                                className={`flex flex-col items-center gap-1.5 p-4 rounded-2xl border-2 transition-all ${
+                                className={`flex flex-col items-center gap-1.5 p-3 rounded-2xl border-2 transition-all ${
                                     paymentMethod === 'cash'
                                         ? 'border-blue-600 bg-blue-50'
                                         : 'border-gray-200 bg-white hover:border-gray-300'
                                 }`}
                             >
-                                <HiOutlineCash className="w-7 h-7" style={{ color: paymentMethod === 'cash' ? primaryColor : '#6b7280' }} />
-                                <span className="text-sm font-medium" style={{ color: paymentMethod === 'cash' ? primaryColor : '#6b7280' }}>Pay at Counter</span>
-                                <span className="text-xs text-gray-400">Cash / Card</span>
+                                <HiOutlineCash className="w-6 h-6" style={{ color: paymentMethod === 'cash' ? primaryColor : '#6b7280' }} />
+                                <span className="text-xs font-medium" style={{ color: paymentMethod === 'cash' ? primaryColor : '#6b7280' }}>Counter</span>
                             </button>
                             <button
                                 onClick={() => setPaymentMethod('online')}
-                                className={`flex flex-col items-center gap-1.5 p-4 rounded-2xl border-2 transition-all ${
+                                className={`flex flex-col items-center gap-1.5 p-3 rounded-2xl border-2 transition-all ${
                                     paymentMethod === 'online'
                                         ? 'border-blue-600 bg-blue-50'
                                         : 'border-gray-200 bg-white hover:border-gray-300'
                                 }`}
                             >
-                                <HiOutlineCreditCard className="w-7 h-7" style={{ color: paymentMethod === 'online' ? primaryColor : '#6b7280' }} />
-                                <span className="text-sm font-medium" style={{ color: paymentMethod === 'online' ? primaryColor : '#6b7280' }}>Pay Online</span>
-                                <span className="text-xs text-gray-400">SSLCommerz</span>
+                                <HiOutlineCreditCard className="w-6 h-6" style={{ color: paymentMethod === 'online' ? primaryColor : '#6b7280' }} />
+                                <span className="text-xs font-medium" style={{ color: paymentMethod === 'online' ? primaryColor : '#6b7280' }}>Online</span>
                             </button>
+                            {orderType === 'dine' && (
+                                <button
+                                    onClick={() => setPaymentMethod('pay_later')}
+                                    className={`flex flex-col items-center gap-1.5 p-3 rounded-2xl border-2 transition-all ${
+                                        paymentMethod === 'pay_later'
+                                            ? 'border-blue-600 bg-blue-50'
+                                            : 'border-gray-200 bg-white hover:border-gray-300'
+                                    }`}
+                                >
+                                    <HiOutlineClock className="w-6 h-6" style={{ color: paymentMethod === 'pay_later' ? primaryColor : '#6b7280' }} />
+                                    <span className="text-xs font-medium" style={{ color: paymentMethod === 'pay_later' ? primaryColor : '#6b7280' }}>Pay Later</span>
+                                </button>
+                            )}
                         </div>
                         {paymentMethod === 'online' && (
                             <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-xl">
                                 <p className="text-xs text-blue-700">
-                                    You will be redirected to SSLCommerz secure payment gateway after placing the order.
+                                    You will be redirected to SSLCommerz secure payment gateway.
+                                </p>
+                            </div>
+                        )}
+                        {paymentMethod === 'pay_later' && (
+                            <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                                <p className="text-xs text-amber-700">
+                                    Pay at the end of your meal. A waiter will bring the bill to your table.
                                 </p>
                             </div>
                         )}
                     </div>
 
-                    {/* Totals */}
-                    <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-3 space-y-2">
-                        <div className="flex justify-between text-sm">
-                            <span className="text-gray-500">Subtotal</span>
-                            <span className="font-medium">৳{subtotal.toFixed(2)}</span>
+                    {/* Invoice Preview */}
+                    <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-3">
+                        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
+                            <HiOutlineDocumentText className="w-5 h-5 text-gray-500" />
+                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Order Summary</span>
                         </div>
-                        {discount > 0 && (
-                            <div className="flex justify-between text-sm text-green-600">
-                                <span>Voucher Discount</span>
-                                <span className="font-medium">-৳{discount.toFixed(2)}</span>
-                            </div>
-                        )}
-                        {tax > 0 && (
+
+                        {/* Item details */}
+                        <div className="space-y-1.5 mb-3 pb-3 border-b border-dashed border-gray-200">
+                            {items.map((item) => (
+                                <div key={item.menu_item_id} className="flex justify-between text-sm">
+                                    <span className="text-gray-600">{item.qty}x {item.name}</span>
+                                    <span className="text-gray-800">৳{(item.price * item.qty).toFixed(2)}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Billing details */}
+                        <div className="space-y-2">
                             <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">Tax ({taxRate}%)</span>
+                                <span className="text-gray-500">Subtotal</span>
+                                <span className="font-medium">৳{subtotal.toFixed(2)}</span>
+                            </div>
+                            {discount > 0 && (
+                                <div className="flex justify-between text-sm text-green-600">
+                                    <span>Discount</span>
+                                    <span className="font-medium">-৳{discount.toFixed(2)}</span>
+                                </div>
+                            )}
+                            <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">VAT/Tax ({taxRate || 0}%)</span>
                                 <span className="font-medium">৳{tax.toFixed(2)}</span>
                             </div>
-                        )}
-                        <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-100">
-                            <span>Total</span>
-                            <span style={{ color: primaryColor }}>৳{total.toFixed(2)}</span>
+                            <div className="flex justify-between text-base font-bold pt-2 border-t border-gray-200">
+                                <span>Total Payable</span>
+                                <span style={{ color: primaryColor }}>৳{total.toFixed(2)}</span>
+                            </div>
                         </div>
                     </div>
 
@@ -382,7 +422,11 @@ export default function CustomerCartPage() {
                             ? 'Redirecting to payment...'
                             : placeOrder.isPending
                                 ? 'Placing order...'
-                                : `${paymentMethod === 'online' ? 'Place Order & Pay' : 'Place Order'} — ৳${total.toFixed(2)}`}
+                                : paymentMethod === 'online'
+                                    ? `Place Order & Pay — ৳${total.toFixed(2)}`
+                                    : paymentMethod === 'pay_later'
+                                        ? `Place Order (Pay Later) — ৳${total.toFixed(2)}`
+                                        : `Place Order — ৳${total.toFixed(2)}`}
                     </button>
                 </div>
             )}

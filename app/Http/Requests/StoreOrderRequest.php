@@ -20,7 +20,7 @@ class StoreOrderRequest extends FormRequest
             'customer_phone' => 'required_if:type,parcel|nullable|string|max:20',
             'voucher_code' => 'nullable|string|max:50',
             'notes' => 'nullable|string|max:500',
-            'payment_method' => 'required|in:cash,online',
+            'payment_method' => 'required|in:cash,online,pay_later',
             'items' => 'required|array|min:1',
             'items.*.menu_item_id' => 'required|exists:menu_items,id',
             'items.*.qty' => 'required|integer|min:1|max:100',
