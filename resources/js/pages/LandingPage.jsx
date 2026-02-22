@@ -18,117 +18,124 @@ import {
     HiOutlineCog6Tooth,
     HiOutlineClipboardDocumentList,
     HiOutlineShieldCheck,
-    HiOutlineMegaphone,
-    HiOutlineServerStack,
-    HiOutlineDocumentChartBar,
     HiOutlineReceiptPercent,
     HiOutlineCurrencyDollar,
     HiOutlineRocketLaunch,
     HiOutlineSparkles,
     HiOutlineCheckBadge,
+    HiOutlineGlobeAlt,
+    HiOutlinePaintBrush,
+    HiOutlineChatBubbleLeftRight,
+    HiOutlineWrenchScrewdriver,
+    HiOutlineLightBulb,
+    HiOutlineHandThumbUp,
+    HiOutlineSquares2X2,
+    HiOutlineCalendarDays,
 } from 'react-icons/hi2';
 
 const PRIMARY_COLOR = '#ED802A';
 
-// Restaurant Features
-const restaurantFeatures = [
+// ── Core Features ──
+const coreFeatures = [
     {
         icon: HiOutlineQrCode,
         title: 'QR Code Ordering',
-        description: 'Guests scan table QR codes to browse menus and place orders directly from their phones.',
+        description: 'Customers scan a QR code at their table, browse your menu, and place orders straight from their phone — no app download needed.',
     },
     {
         icon: HiOutlineComputerDesktop,
         title: 'POS Terminal',
-        description: 'Lightning-fast point-of-sale for counter staff with cash, card, and mobile payment support.',
+        description: 'Take counter orders at lightning speed. Supports cash, card, and mobile banking with instant receipt printing.',
     },
     {
         icon: HiOutlineBellAlert,
-        title: 'Kitchen Display',
-        description: 'Real-time kitchen display system keeps your back-of-house in perfect sync.',
-    },
-    {
-        icon: HiOutlineChartBarSquare,
-        title: 'Reports & Analytics',
-        description: 'Sales trends, top items, revenue comparisons, and settlement tracking in one dashboard.',
-    },
-    {
-        icon: HiOutlineReceiptPercent,
-        title: 'VAT & Tax Management',
-        description: 'Automatic VAT calculation, inclusive/exclusive pricing, and compliant tax reports.',
-    },
-    {
-        icon: HiOutlineCreditCard,
-        title: 'Flexible Payments',
-        description: 'Cash, card, online payments, and "Pay Later" options for dine-in customers.',
+        title: 'Kitchen Display System',
+        description: 'New orders appear in the kitchen in real-time. Staff tap to advance status so front-of-house always knows what\'s ready.',
     },
     {
         icon: HiOutlineClipboardDocumentList,
         title: 'Order Management',
-        description: 'Track orders from placement to completion with real-time status updates.',
+        description: 'Track every order from placement to completion. Real-time status updates keep your entire operation in sync.',
+    },
+    {
+        icon: HiOutlineCreditCard,
+        title: 'Flexible Payments',
+        description: 'Accept cash, card, online (SSLCommerz), and "Pay Later" for dine-in. Every payment is tracked automatically.',
+    },
+    {
+        icon: HiOutlineReceiptPercent,
+        title: 'VAT & Tax Handling',
+        description: 'Automatic VAT calculation with inclusive/exclusive modes, compliant invoices, and downloadable tax reports.',
+    },
+    {
+        icon: HiOutlineChartBarSquare,
+        title: 'Reports & Analytics',
+        description: 'Sales trends, top-selling items, revenue comparisons, daily breakdowns — all the numbers you need in one place.',
     },
     {
         icon: HiOutlineDevicePhoneMobile,
-        title: 'Mobile Responsive',
-        description: 'Beautiful customer ordering experience that works flawlessly on any device.',
+        title: 'Mobile-First Experience',
+        description: 'Your entire digital menu and ordering experience is beautifully optimized for phones, tablets, and desktops.',
     },
 ];
 
-// Admin Platform Features
-const adminFeatures = [
+// ── Extra Benefits ──
+const extraBenefits = [
     {
-        icon: HiOutlineBuildingStorefront,
-        title: 'Multi-Tenant Architecture',
-        description: 'Each restaurant gets isolated data, custom branding, and independent settings.',
-    },
-    {
-        icon: HiOutlineDocumentChartBar,
-        title: 'Platform Analytics',
-        description: 'Real-time MRR, ARR, churn rate, tenant growth, and revenue insights.',
+        icon: HiOutlinePaintBrush,
+        title: 'Your Brand, Your Look',
+        description: 'Custom logo, colors, banner image, and favicon. Customers see your brand — not ours.',
     },
     {
         icon: HiOutlineUserGroup,
-        title: 'Tenant Management',
-        description: 'Full control over tenants with impersonation, bulk actions, and detailed views.',
+        title: 'Staff & Role Management',
+        description: 'Create accounts for managers, cashiers, and kitchen staff with role-based access control.',
+    },
+    {
+        icon: HiOutlineSquares2X2,
+        title: 'Menu & Category Builder',
+        description: 'Organize items by category, set prices, upload images, toggle availability — all from one dashboard.',
+    },
+    {
+        icon: HiOutlineChatBubbleLeftRight,
+        title: 'AI Menu Assistant',
+        description: 'A smart chatbot on your digital menu helps customers find dishes, get recommendations, and ask about ingredients.',
+    },
+    {
+        icon: HiOutlineGlobeAlt,
+        title: 'Online Ordering Link',
+        description: 'Share a single link on social media or Google — customers can order takeaway without visiting your restaurant.',
     },
     {
         icon: HiOutlineCurrencyDollar,
-        title: 'Subscription Plans',
-        description: 'Create and manage flexible subscription plans with custom features and pricing.',
+        title: 'Vouchers & Discounts',
+        description: 'Create percentage or flat-amount voucher codes. Validate automatically at checkout.',
     },
     {
-        icon: HiOutlineCog6Tooth,
-        title: 'Financial Settlements',
-        description: 'Track commissions, record payments, and manage cross-tenant settlements.',
-    },
-    {
-        icon: HiOutlineMegaphone,
-        title: 'Announcements',
-        description: 'Broadcast announcements to all tenants via in-app notifications or email.',
-    },
-    {
-        icon: HiOutlineServerStack,
-        title: 'System Monitoring',
-        description: 'Health checks, queue stats, cache management, and log viewer.',
+        icon: HiOutlineCalendarDays,
+        title: 'Daily & Monthly Reports',
+        description: 'Download sales, VAT, and revenue reports by day, week, or month for your accountant.',
     },
     {
         icon: HiOutlineShieldCheck,
-        title: 'Audit Logging',
-        description: 'Complete activity tracking with filterable, exportable audit trails.',
+        title: 'Secure & Reliable',
+        description: '99.9 % uptime, automatic backups, and encrypted payments so you can focus on food — not tech.',
     },
 ];
 
+// ── Pricing ──
 const pricingPlans = [
     {
         name: 'Starter',
         price: '1,999',
         period: '/month',
-        description: 'Perfect for small restaurants getting started',
+        description: 'Great for small cafés and new restaurants',
         features: [
             'Up to 10 Tables',
             'QR Code Ordering',
-            'Basic POS Terminal',
+            'POS Terminal',
             'Kitchen Display',
+            'Basic Sales Reports',
             'Email Support',
         ],
         highlighted: false,
@@ -137,13 +144,15 @@ const pricingPlans = [
         name: 'Professional',
         price: '4,999',
         period: '/month',
-        description: 'Ideal for growing restaurants',
+        description: 'Best for busy restaurants that want it all',
         features: [
             'Unlimited Tables',
             'All Starter Features',
-            'Advanced Reports',
-            'Multiple Staff Accounts',
             'Online Payments (SSLCommerz)',
+            'Advanced Analytics & Reports',
+            'Multiple Staff Accounts',
+            'AI Menu Assistant',
+            'Voucher Management',
             'Priority Support',
         ],
         highlighted: true,
@@ -152,10 +161,10 @@ const pricingPlans = [
         name: 'Enterprise',
         price: 'Custom',
         period: '',
-        description: 'For restaurant chains & franchises',
+        description: 'For chains, franchises, and large operations',
         features: [
             'Everything in Professional',
-            'Multi-Location Support',
+            'Multiple Locations',
             'Dedicated Account Manager',
             'Custom Integrations',
             'SLA Guarantee',
@@ -165,23 +174,44 @@ const pricingPlans = [
     },
 ];
 
+// ── How it works ──
 const steps = [
-    { number: '01', title: 'Sign Up', description: 'Register your restaurant in under a minute with our simple onboarding.' },
-    { number: '02', title: 'Configure', description: 'Add your menu, categories, tables, and customize your branding.' },
-    { number: '03', title: 'Go Live', description: 'Print QR codes, train your staff, and start accepting orders!' },
+    { number: '01', title: 'Sign Up', description: 'Create your restaurant account in under a minute — no credit card required.' },
+    { number: '02', title: 'Set Up Your Menu', description: 'Add categories, items, prices, and images. Customize your branding and tables.' },
+    { number: '03', title: 'Start Taking Orders', description: 'Print QR codes, place them on tables, and let customers order instantly.' },
 ];
 
+// ── Social proof ──
 const stats = [
     { value: '500+', label: 'Restaurants' },
-    { value: '2M+', label: 'Orders Processed' },
+    { value: '2M+', label: 'Orders Served' },
     { value: '99.9%', label: 'Uptime' },
     { value: '24/7', label: 'Support' },
+];
+
+// ── Testimonials ──
+const testimonials = [
+    {
+        quote: 'Our table turnover improved by 30 % after switching to QR-based ordering. Customers love it.',
+        author: 'Fahad Rahman',
+        role: 'Owner, Spice Garden',
+    },
+    {
+        quote: 'The POS and kitchen display keep everything in sync. We haven\'t lost a single order ticket since day one.',
+        author: 'Nusrat Jahan',
+        role: 'Manager, Urban Bites',
+    },
+    {
+        quote: 'Finally, a system that handles VAT properly and gives me reports I can actually send to my accountant.',
+        author: 'Taufiq Ahmed',
+        role: 'Owner, Taufiq\'s Kitchen',
+    },
 ];
 
 export default function LandingPage() {
     const { branding } = useBrandingStore();
     const logoSrc = branding.platform_logo ? `/storage/${branding.platform_logo}` : null;
-    const platformName = 'Infyrasoft';
+    const platformName = branding.platform_name || 'Infyrasoft';
 
     const [form, setForm] = useState({ name: '', email: '', phone: '', restaurant_name: '', message: '' });
     const [submitting, setSubmitting] = useState(false);
@@ -223,7 +253,7 @@ export default function LandingPage() {
                     </Link>
                     <div className="flex items-center gap-1 sm:gap-3">
                         <a href="#features" className="hidden md:inline text-sm text-gray-600 hover:text-gray-900 px-3 py-2">Features</a>
-                        <a href="#admin" className="hidden md:inline text-sm text-gray-600 hover:text-gray-900 px-3 py-2">Platform</a>
+                        <a href="#how-it-works" className="hidden md:inline text-sm text-gray-600 hover:text-gray-900 px-3 py-2">How It Works</a>
                         <a href="#pricing" className="hidden md:inline text-sm text-gray-600 hover:text-gray-900 px-3 py-2">Pricing</a>
                         <a href="#contact" className="hidden md:inline text-sm text-gray-600 hover:text-gray-900 px-3 py-2">Contact</a>
                         <Link to="/login" className="text-sm font-medium px-5 py-2.5 rounded-xl text-white transition-all hover:opacity-90" style={{ backgroundColor: PRIMARY_COLOR }}>
@@ -235,7 +265,6 @@ export default function LandingPage() {
 
             {/* ─── Hero ─── */}
             <section className="relative overflow-hidden" style={{ background: `linear-gradient(135deg, #FFF7ED 0%, #FFFFFF 50%, #FEF3C7 100%)` }}>
-                {/* Decorative elements */}
                 <div className="absolute top-20 right-10 w-72 h-72 rounded-full blur-3xl opacity-30" style={{ backgroundColor: PRIMARY_COLOR }} />
                 <div className="absolute bottom-10 left-10 w-96 h-96 rounded-full blur-3xl opacity-20" style={{ backgroundColor: '#FBBF24' }} />
 
@@ -243,26 +272,26 @@ export default function LandingPage() {
                     <div className="text-center max-w-4xl mx-auto">
                         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-6" style={{ backgroundColor: `${PRIMARY_COLOR}15`, color: PRIMARY_COLOR }}>
                             <HiOutlineSparkles className="w-4 h-4" />
-                            Complete Restaurant Management Solution
+                            Smart Restaurant Management System
                         </div>
                         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight tracking-tight">
-                            Transform Your Restaurant <br className="hidden sm:block" />
-                            <span style={{ color: PRIMARY_COLOR }}>Into a Digital Powerhouse</span>
+                            Run Your Restaurant <br className="hidden sm:block" />
+                            <span style={{ color: PRIMARY_COLOR }}>Smarter, Not Harder</span>
                         </h1>
                         <p className="mt-6 max-w-2xl mx-auto text-lg sm:text-xl text-gray-600 leading-relaxed">
-                            QR ordering, POS terminal, kitchen display, analytics, multi-tenant platform —
-                            everything you need to run your restaurant business smarter.
+                            QR code ordering, a powerful POS, real-time kitchen display, and beautiful reports —
+                            everything you need to delight customers and grow revenue, from a single dashboard.
                         </p>
                         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-                            <Link
-                                to="/register"
+                            <a
+                                href="#contact"
                                 className="text-base px-8 py-3.5 rounded-xl text-white font-semibold shadow-lg flex items-center gap-2 transition-all hover:opacity-90"
                                 style={{ backgroundColor: PRIMARY_COLOR, boxShadow: `0 10px 40px -10px ${PRIMARY_COLOR}80` }}
                             >
-                                Start Free Trial <HiOutlineRocketLaunch className="w-5 h-5" />
-                            </Link>
-                            <a href="#contact" className="text-base font-medium text-gray-700 hover:text-gray-900 transition-colors px-6 py-3.5 rounded-xl border border-gray-200 bg-white hover:border-gray-300">
-                                Request Demo
+                                Get Started Free <HiOutlineRocketLaunch className="w-5 h-5" />
+                            </a>
+                            <a href="#features" className="text-base font-medium text-gray-700 hover:text-gray-900 transition-colors px-6 py-3.5 rounded-xl border border-gray-200 bg-white hover:border-gray-300">
+                                See All Features
                             </a>
                         </div>
                     </div>
@@ -283,17 +312,17 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* ─── Restaurant Features ─── */}
+            {/* ─── Core Features ─── */}
             <section id="features" className="py-20 sm:py-28 bg-white">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center max-w-2xl mx-auto mb-16">
-                        <p className="text-sm font-semibold tracking-wider uppercase mb-3" style={{ color: PRIMARY_COLOR }}>Restaurant Features</p>
+                        <p className="text-sm font-semibold tracking-wider uppercase mb-3" style={{ color: PRIMARY_COLOR }}>Core Features</p>
                         <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Everything Your Restaurant Needs</h2>
-                        <p className="mt-4 text-gray-500 text-lg">A powerful suite of tools designed for modern restaurant operations.</p>
+                        <p className="mt-4 text-gray-500 text-lg">From taking orders to tracking sales — one platform covers it all.</p>
                     </div>
 
                     <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {restaurantFeatures.map((f, i) => (
+                        {coreFeatures.map((f, i) => (
                             <div
                                 key={i}
                                 className="group relative rounded-2xl border border-gray-100 p-6 hover:shadow-xl hover:border-orange-100 transition-all duration-300 bg-white"
@@ -312,17 +341,17 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* ─── Admin Platform Features ─── */}
-            <section id="admin" className="py-20 sm:py-28" style={{ backgroundColor: '#FFFBF5' }}>
+            {/* ─── Extra Benefits ─── */}
+            <section className="py-20 sm:py-28" style={{ backgroundColor: '#FFFBF5' }}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center max-w-2xl mx-auto mb-16">
-                        <p className="text-sm font-semibold tracking-wider uppercase mb-3" style={{ color: PRIMARY_COLOR }}>SaaS Platform</p>
-                        <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Powerful Admin Management</h2>
-                        <p className="mt-4 text-gray-500 text-lg">Enterprise-grade platform features for managing multiple restaurants.</p>
+                        <p className="text-sm font-semibold tracking-wider uppercase mb-3" style={{ color: PRIMARY_COLOR }}>More to Love</p>
+                        <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Built for the Way You Work</h2>
+                        <p className="mt-4 text-gray-500 text-lg">Thoughtful extras that make day-to-day restaurant management easier.</p>
                     </div>
 
                     <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {adminFeatures.map((f, i) => (
+                        {extraBenefits.map((f, i) => (
                             <div
                                 key={i}
                                 className="group relative rounded-2xl border border-orange-100 p-6 hover:shadow-xl transition-all duration-300 bg-white"
@@ -347,6 +376,7 @@ export default function LandingPage() {
                     <div className="text-center max-w-2xl mx-auto mb-16">
                         <p className="text-sm font-semibold tracking-wider uppercase mb-3" style={{ color: PRIMARY_COLOR }}>How It Works</p>
                         <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Up and Running in Minutes</h2>
+                        <p className="mt-4 text-gray-500 text-lg">Three simple steps to digitize your restaurant.</p>
                     </div>
 
                     <div className="grid sm:grid-cols-3 gap-10">
@@ -369,13 +399,36 @@ export default function LandingPage() {
                 </div>
             </section>
 
+            {/* ─── Testimonials ─── */}
+            <section className="py-20 sm:py-28 bg-gray-50">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="text-center max-w-2xl mx-auto mb-16">
+                        <p className="text-sm font-semibold tracking-wider uppercase mb-3" style={{ color: PRIMARY_COLOR }}>Testimonials</p>
+                        <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Loved by Restaurant Owners</h2>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                        {testimonials.map((t, i) => (
+                            <div key={i} className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100 flex flex-col">
+                                <HiOutlineLightBulb className="w-8 h-8 mb-4 flex-shrink-0" style={{ color: PRIMARY_COLOR }} />
+                                <p className="text-gray-600 italic flex-1 leading-relaxed">"{t.quote}"</p>
+                                <div className="mt-6 pt-4 border-t border-gray-100">
+                                    <p className="font-semibold text-gray-900 text-sm">{t.author}</p>
+                                    <p className="text-xs text-gray-400">{t.role}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
             {/* ─── Pricing ─── */}
-            <section id="pricing" className="py-20 sm:py-28 bg-gray-50">
+            <section id="pricing" className="py-20 sm:py-28 bg-white">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center max-w-2xl mx-auto mb-16">
                         <p className="text-sm font-semibold tracking-wider uppercase mb-3" style={{ color: PRIMARY_COLOR }}>Pricing</p>
                         <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Simple, Transparent Pricing</h2>
-                        <p className="mt-4 text-gray-500 text-lg">Choose the plan that fits your restaurant's needs.</p>
+                        <p className="mt-4 text-gray-500 text-lg">No hidden fees. Pick a plan, start today, upgrade anytime.</p>
                     </div>
 
                     <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
@@ -396,8 +449,14 @@ export default function LandingPage() {
                                 <h3 className="text-xl font-bold text-gray-900 mb-2">{plan.name}</h3>
                                 <p className="text-gray-500 text-sm mb-4">{plan.description}</p>
                                 <div className="mb-6">
-                                    <span className="text-4xl font-bold text-gray-900">৳{plan.price}</span>
-                                    <span className="text-gray-500">{plan.period}</span>
+                                    {plan.price === 'Custom' ? (
+                                        <span className="text-4xl font-bold text-gray-900">Custom</span>
+                                    ) : (
+                                        <>
+                                            <span className="text-4xl font-bold text-gray-900">৳{plan.price}</span>
+                                            <span className="text-gray-500">{plan.period}</span>
+                                        </>
+                                    )}
                                 </div>
                                 <ul className="space-y-3 mb-8">
                                     {plan.features.map((feature, j) => (
@@ -407,13 +466,13 @@ export default function LandingPage() {
                                         </li>
                                     ))}
                                 </ul>
-                                <Link
-                                    to="/register"
-                                    className={`block text-center py-3 rounded-xl font-semibold transition-all ${plan.highlighted ? 'text-white' : 'text-gray-700 border border-gray-200 hover:border-gray-300'}`}
+                                <a
+                                    href="#contact"
+                                    className={`block text-center py-3 rounded-xl font-semibold transition-all ${plan.highlighted ? 'text-white hover:opacity-90' : 'text-gray-700 border border-gray-200 hover:border-gray-300'}`}
                                     style={{ backgroundColor: plan.highlighted ? PRIMARY_COLOR : 'white' }}
                                 >
-                                    Get Started
-                                </Link>
+                                    {plan.price === 'Custom' ? 'Contact Us' : 'Get Started'}
+                                </a>
                             </div>
                         ))}
                     </div>
@@ -423,17 +482,17 @@ export default function LandingPage() {
             {/* ─── CTA Banner ─── */}
             <section className="py-20" style={{ backgroundColor: PRIMARY_COLOR }}>
                 <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                    <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">Ready to Transform Your Restaurant?</h2>
+                    <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">Ready to Modernize Your Restaurant?</h2>
                     <p className="text-orange-100 text-lg mb-8 max-w-xl mx-auto">
-                        Join hundreds of restaurant owners who are already saving time and boosting revenue with {platformName}.
+                        Join hundreds of restaurant owners who are saving time, reducing errors, and boosting revenue every day.
                     </p>
-                    <Link
-                        to="/register"
+                    <a
+                        href="#contact"
                         className="inline-flex items-center gap-2 bg-white font-semibold px-8 py-3.5 rounded-xl hover:bg-orange-50 transition-colors shadow-lg"
                         style={{ color: PRIMARY_COLOR }}
                     >
-                        Start Your Free Trial <HiOutlineArrowRight className="w-5 h-5" />
-                    </Link>
+                        Request a Free Demo <HiOutlineArrowRight className="w-5 h-5" />
+                    </a>
                 </div>
             </section>
 
@@ -442,8 +501,8 @@ export default function LandingPage() {
                 <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-12">
                         <p className="text-sm font-semibold tracking-wider uppercase mb-3" style={{ color: PRIMARY_COLOR }}>Contact Us</p>
-                        <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Have a Question or Want a Demo?</h2>
-                        <p className="mt-4 text-gray-500 text-lg">Fill out the form below and we'll get back to you shortly.</p>
+                        <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Let's Get Your Restaurant Online</h2>
+                        <p className="mt-4 text-gray-500 text-lg">Fill out the form and our team will reach out to set you up.</p>
                     </div>
 
                     {submitted ? (
@@ -520,7 +579,7 @@ export default function LandingPage() {
                                     value={form.message}
                                     onChange={handleChange}
                                     className="input min-h-[120px] resize-y"
-                                    placeholder="Tell us about your needs…"
+                                    placeholder="Tell us about your restaurant and what you're looking for…"
                                     rows={5}
                                     required
                                 />
@@ -549,7 +608,6 @@ export default function LandingPage() {
             <footer className="bg-gray-900 text-gray-400 py-16">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="grid md:grid-cols-4 gap-10 mb-12">
-                        {/* Brand */}
                         <div className="md:col-span-2">
                             <Link to="/" className="inline-block mb-4">
                                 {logoSrc ? (
@@ -563,28 +621,26 @@ export default function LandingPage() {
                                 )}
                             </Link>
                             <p className="text-gray-500 max-w-md">
-                                The complete restaurant management platform. From QR ordering to enterprise analytics,
-                                we help restaurants of all sizes operate smarter.
+                                The complete restaurant management system — from QR ordering and POS to kitchen displays and analytics.
+                                We help restaurants of every size serve better and grow faster.
                             </p>
                         </div>
 
-                        {/* Links */}
                         <div>
-                            <h4 className="text-white font-semibold mb-4">Product</h4>
+                            <h4 className="text-white font-semibold mb-4">Quick Links</h4>
                             <ul className="space-y-2 text-sm">
                                 <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
-                                <li><a href="#admin" className="hover:text-white transition-colors">Platform</a></li>
-                                <li><a href="#pricing" className="hover:text-white transition-colors">Pricing</a></li>
                                 <li><a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a></li>
+                                <li><a href="#pricing" className="hover:text-white transition-colors">Pricing</a></li>
+                                <li><a href="#contact" className="hover:text-white transition-colors">Contact</a></li>
                             </ul>
                         </div>
 
                         <div>
-                            <h4 className="text-white font-semibold mb-4">Company</h4>
+                            <h4 className="text-white font-semibold mb-4">Account</h4>
                             <ul className="space-y-2 text-sm">
-                                <li><a href="#contact" className="hover:text-white transition-colors">Contact</a></li>
                                 <li><Link to="/login" className="hover:text-white transition-colors">Login</Link></li>
-                                <li><Link to="/register" className="hover:text-white transition-colors">Sign Up</Link></li>
+                                <li><a href="#contact" className="hover:text-white transition-colors">Request Demo</a></li>
                             </ul>
                         </div>
                     </div>
