@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { reportAPI } from '../../services/api';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import SentimentDashboard from '../../components/ai/SentimentDashboard';
 
 export default function ReportsPage() {
     const [tab, setTab] = useState('sales');
@@ -51,6 +52,7 @@ export default function ReportsPage() {
         { key: 'vouchers', label: 'Vouchers' },
         { key: 'vat', label: 'VAT Report' },
         { key: 'comparison', label: 'Yearly Comparison' },
+        { key: 'sentiment', label: 'Sentiment' },
     ];
 
     return (
@@ -68,7 +70,7 @@ export default function ReportsPage() {
             </div>
 
             {/* Date Range — for sales, tables, vouchers, vat monthly */}
-            {!['comparison', 'vat'].includes(tab) && (
+            {!['comparison', 'vat', 'sentiment'].includes(tab) && (
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6">
                     <div>
                         <label className="label">From</label>
@@ -306,6 +308,11 @@ export default function ReportsPage() {
                         </table>
                     </div>
                 )
+            )}
+
+            {/* Sentiment Analysis */}
+            {tab === 'sentiment' && (
+                <SentimentDashboard />
             )}
         </div>
     );

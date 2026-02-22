@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { menuAPI, categoryAPI } from '../../services/api';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import Modal from '../../components/ui/Modal';
+import GenerateDescriptionButton from '../../components/ai/GenerateDescriptionButton';
 import toast from 'react-hot-toast';
 import { HiOutlinePhotograph } from 'react-icons/hi';
 
@@ -13,6 +14,7 @@ export default function MenuItemsPage() {
     const [search, setSearch] = useState('');
     const [imagePreview, setImagePreview] = useState(null);
     const [imageFile, setImageFile] = useState(null);
+    const [formDescription, setFormDescription] = useState('');
     const imageInputRef = useRef(null);
     const { data: items, isLoading } = useQuery({
         queryKey: ['menu-items', search],
@@ -58,12 +60,14 @@ export default function MenuItemsPage() {
         setEditing(null);
         setImagePreview(null);
         setImageFile(null);
+        setFormDescription('');
     };
 
     const openForm = (item = null) => {
         setEditing(item);
         setImagePreview(item?.image_url || null);
         setImageFile(null);
+        setFormDescription(item?.description || '');
         setShowForm(true);
     };
 
@@ -83,7 +87,7 @@ export default function MenuItemsPage() {
         fd.append('name', raw.name);
         fd.append('price', raw.price);
         if (raw.category_id) fd.append('category_id', raw.category_id);
-        if (raw.description) fd.append('description', raw.description);
+        if (formDescription) fd.append('description', formDescription);
         fd.append('is_active', e.target.is_active.checked ? '1' : '0');
 
         if (imageFile) {
@@ -206,8 +210,24 @@ export default function MenuItemsPage() {
                         <input name="price" type="number" step="0.01" className="input" defaultValue={editing?.price} required />
                     </div>
                     <div>
-                        <label className="label">Description</label>
-                        <textarea name="description" className="input" rows={2} defaultValue={editing?.description} />
+                        <div className="flex items-center justify-between mb-1">
+                            <label className="label mb-0">Description</label>
+                            <GenerateDescriptionButton
+                                itemName={document.querySelector('input[name="name"]')?.value || editing?.name || ''}
+                                categoryName={categories?.find(c => c.id == document.querySelector('select[name="category_id"]')?.value)?.name || editing?.category?.name}
+                                price={parseFloat(document.querySelector('input[name="price"]')?.value) || editing?.price}
+                                currentDescription={formDescription}
+                                onDescriptionGenerated={(desc) => setFormDescription(desc)}
+                            />
+                        </div>
+                        <textarea
+                            name="description"
+                            className="input"
+                            rows={2}
+                            value={formDescription}
+                            onChange={(e) => setFormDescription(e.target.value)}
+                            placeholder="Enter description or click AI Generate..."
+                        />
                     </div>
                     <div className="flex items-center gap-2">
                         <input name="is_active" type="checkbox" defaultChecked={editing?.is_active ?? true} className="rounded" />

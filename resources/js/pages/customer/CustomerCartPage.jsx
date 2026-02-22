@@ -68,10 +68,13 @@ export default function CustomerCartPage() {
             ? subtotal * (voucherData.discount_value / 100)
             : Math.min(voucherData.discount_value, subtotal)
         : 0;
-    const taxRate = restaurant?.tax_rate || 0;
+    const taxRate = parseFloat(restaurant?.default_vat_rate ?? restaurant?.tax_rate ?? 0);
+    const vatInclusive = restaurant?.vat_inclusive || false;
     const taxableAmount = Math.max(subtotal - discount, 0);
-    const tax = taxableAmount * (taxRate / 100);
-    const total = taxableAmount + tax;
+    const tax = vatInclusive
+        ? taxableAmount * (taxRate / (100 + taxRate))
+        : taxableAmount * (taxRate / 100);
+    const total = vatInclusive ? taxableAmount : taxableAmount + tax;
 
     const validateVoucher = async () => {
         if (!voucher.trim()) return;

@@ -295,8 +295,7 @@ export default function OrderTrackingPage() {
             {/* Invoice Modal */}
             {showInvoice && invoiceData && (
                 <POSInvoice
-                    order={invoiceData.order}
-                    restaurant={invoiceData.restaurant}
+                    data={invoiceData}
                     onClose={() => setShowInvoice(false)}
                 />
             )}

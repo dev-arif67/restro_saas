@@ -1,20 +1,26 @@
 <?php
 
+use App\Http\Controllers\Api\AIAnalyticsController;
+use App\Http\Controllers\Api\SalesForecastController;
 use App\Http\Controllers\Api\AnnouncementController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BrandingController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ContactController;
+use App\Http\Controllers\Api\CustomerChatController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\KitchenController;
+use App\Http\Controllers\Api\MenuDescriptionController;
+use App\Http\Controllers\Api\SentimentController;
 use App\Http\Controllers\Api\MenuItemController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PlanController;
 use App\Http\Controllers\Api\PlatformSettingController;
 use App\Http\Controllers\Api\PosOrderController;
+use App\Http\Controllers\Api\RecommendationController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SettlementController;
 use App\Http\Controllers\Api\SubscriptionController;
@@ -53,6 +59,14 @@ Route::prefix('customer')->group(function () {
     Route::get('restaurant/{tenant}', [CustomerController::class, 'restaurant']);
     Route::get('restaurant/{tenant}/menu', [CustomerController::class, 'menu']);
     Route::get('restaurant/{tenant}/table/{table}', [CustomerController::class, 'table']);
+
+    // AI Chatbot (public)
+    Route::post('restaurant/{tenant}/chat', [CustomerChatController::class, 'chat']);
+    Route::get('restaurant/{tenant}/chat/suggestions', [CustomerChatController::class, 'suggestions']);
+
+    // Smart Recommendations
+    Route::post('restaurant/{tenant}/recommendations', [RecommendationController::class, 'index']);
+    Route::get('restaurant/{tenant}/recommendations/{itemId}/fbt', [RecommendationController::class, 'frequentlyBoughtTogether']);
 
     // Place order (with WiFi validation)
     Route::post('restaurant/{tenant}/order', [OrderController::class, 'store'])
@@ -151,6 +165,41 @@ Route::middleware(['auth:api'])->group(function () {
             // VAT Reports
             Route::get('vat/daily', [VatReportController::class, 'dailyZReport']);
             Route::get('vat/monthly', [VatReportController::class, 'monthlyVatReport']);
+        });
+
+        // AI Analytics Assistant
+        Route::prefix('ai/analytics')->group(function () {
+            Route::post('ask', [AIAnalyticsController::class, 'ask']);
+            Route::get('insights', [AIAnalyticsController::class, 'insights']);
+            Route::get('suggestions', [AIAnalyticsController::class, 'suggestions']);
+            Route::get('usage', [AIAnalyticsController::class, 'usage']);
+            Route::get('conversations', [AIAnalyticsController::class, 'conversations']);
+            Route::get('conversations/{id}', [AIAnalyticsController::class, 'conversation']);
+            Route::delete('conversations/{id}', [AIAnalyticsController::class, 'deleteConversation']);
+        });
+
+        // AI Sales Forecasting
+        Route::prefix('ai/forecast')->group(function () {
+            Route::get('/', [SalesForecastController::class, 'forecast']);
+            Route::get('busy-hours', [SalesForecastController::class, 'busyHours']);
+            Route::get('staffing', [SalesForecastController::class, 'staffing']);
+        });
+
+        // AI Menu Description Generator
+        Route::prefix('ai/description')->group(function () {
+            Route::post('generate', [MenuDescriptionController::class, 'generate']);
+            Route::post('alternatives', [MenuDescriptionController::class, 'alternatives']);
+            Route::post('improve', [MenuDescriptionController::class, 'improve']);
+            Route::post('batch', [MenuDescriptionController::class, 'batch']);
+            Route::post('menu-items/{id}', [MenuDescriptionController::class, 'generateAndApply']);
+        });
+
+        // AI Sentiment Analysis
+        Route::prefix('ai/sentiment')->group(function () {
+            Route::get('overview', [SentimentController::class, 'overview']);
+            Route::get('trends', [SentimentController::class, 'trends']);
+            Route::get('negative', [SentimentController::class, 'negativeFeedback']);
+            Route::post('analyze', [SentimentController::class, 'analyze']);
         });
 
         // Settlements

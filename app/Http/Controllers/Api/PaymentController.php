@@ -105,10 +105,20 @@ class PaymentController extends BaseApiController
 
             // Redirect to order tracking page
             $orderNumber = $order?->order_number ?? '';
-            return redirect("/order/{$orderNumber}?payment=success");
+            if ($orderNumber) {
+                return redirect("/order/{$orderNumber}?payment=success");
+            }
+
+            return redirect('/?payment=success');
         }
 
-        return redirect("/order/" . ($this->findOrderByTranId($tranId)?->order_number ?? '') . "?payment=failed");
+        $failOrder = $this->findOrderByTranId($tranId);
+        $failOrderNumber = $failOrder?->order_number ?? '';
+        if ($failOrderNumber) {
+            return redirect("/order/{$failOrderNumber}?payment=failed");
+        }
+
+        return redirect('/?payment=failed');
     }
 
     /**
@@ -122,7 +132,11 @@ class PaymentController extends BaseApiController
         $order = $this->findOrderByTranId($tranId);
         $orderNumber = $order?->order_number ?? '';
 
-        return redirect("/order/{$orderNumber}?payment=failed");
+        if ($orderNumber) {
+            return redirect("/order/{$orderNumber}?payment=failed");
+        }
+
+        return redirect('/?payment=failed');
     }
 
     /**
@@ -136,7 +150,11 @@ class PaymentController extends BaseApiController
         $order = $this->findOrderByTranId($tranId);
         $orderNumber = $order?->order_number ?? '';
 
-        return redirect("/order/{$orderNumber}?payment=cancelled");
+        if ($orderNumber) {
+            return redirect("/order/{$orderNumber}?payment=cancelled");
+        }
+
+        return redirect('/?payment=cancelled');
     }
 
     /**
@@ -172,13 +190,26 @@ class PaymentController extends BaseApiController
 
     /**
      * Find order by transaction ID pattern.
+     * Handles race condition where IPN may update transaction_id before success callback.
      */
     private function findOrderByTranId(?string $tranId): ?Order
     {
         if (!$tranId) return null;
 
-        return Order::withoutGlobalScopes()
+        // Try exact match first
+        $order = Order::withoutGlobalScopes()
             ->where('transaction_id', $tranId)
             ->first();
+
+        if ($order) return $order;
+
+        // Fallback: extract order number from tran_id format ORDER-{order_number}-{timestamp}
+        if (preg_match('/^ORDER-(.+)-\d+$/', $tranId, $matches)) {
+            return Order::withoutGlobalScopes()
+                ->where('order_number', $matches[1])
+                ->first();
+        }
+
+        return null;
     }
 }

@@ -6,6 +6,7 @@ import { useCartStore } from '../stores/cartStore';
 import { useBrandingStore } from '../stores/brandingStore';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import PoweredBy from '../components/ui/PoweredBy';
+import CustomerChatWidget from '../components/ai/CustomerChatWidget';
 import { HiOutlineClock } from 'react-icons/hi';
 
 // Get recent orders from localStorage
@@ -39,6 +40,14 @@ export default function CustomerLayout() {
         queryKey: ['restaurant', slug],
         queryFn: () => customerAPI.restaurant(slug).then((r) => r.data.data),
     });
+
+    // Fetch actual table info to get table_number
+    const { data: tableInfo } = useQuery({
+        queryKey: ['table-info', slug, tableId],
+        queryFn: () => customerAPI.table(slug, tableId).then((r) => r.data.data),
+        enabled: !!tableId && !!slug,
+    });
+    const tableNumber = tableInfo?.table_number || tableId;
 
     const primaryColor = restaurant?.primary_color || '#3B82F6';
 
@@ -93,7 +102,7 @@ export default function CustomerLayout() {
                         <div className="min-w-0">
                             <h1 className="text-base font-bold text-gray-900 truncate">{restaurant?.name}</h1>
                             {tableId ? (
-                                <p className="text-xs text-gray-500">Table {tableId} &middot; Dine-in</p>
+                                <p className="text-xs text-gray-500">Table {tableNumber} &middot; Dine-in</p>
                             ) : (
                                 <p className="text-xs text-gray-500">Takeaway Order</p>
                             )}
@@ -161,6 +170,9 @@ export default function CustomerLayout() {
             <footer className="py-4 text-center">
                 <PoweredBy />
             </footer>
+
+            {/* AI Chat Assistant */}
+            <CustomerChatWidget tenantSlug={slug} primaryColor={primaryColor} />
         </div>
     );
 }

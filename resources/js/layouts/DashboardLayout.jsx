@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useBrandingStore } from '../stores/brandingStore';
 import { authAPI } from '../services/api';
 import PoweredBy from '../components/ui/PoweredBy';
+import AdminAIChat from '../components/ai/AdminAIChat';
 import {
     HiOutlineHome,
     HiOutlineClipboardList,
@@ -326,6 +327,9 @@ export default function DashboardLayout() {
                     </div>
                 </main>
             </div>
+
+            {/* AI Analytics Assistant - Available for restaurant_admin */}
+            {user?.role === 'restaurant_admin' && <AdminAIChat />}
         </div>
     );
 }

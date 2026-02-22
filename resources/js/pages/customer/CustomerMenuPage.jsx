@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { customerAPI } from '../../services/api';
 import { useCartStore } from '../../stores/cartStore';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import RecommendationCarousel from '../../components/ai/RecommendationCarousel';
 import toast from 'react-hot-toast';
 import { HiOutlineSearch, HiOutlineShoppingCart, HiOutlineX } from 'react-icons/hi';
 
@@ -91,6 +92,11 @@ export default function CustomerMenuPage() {
                     ))}
                 </div>
             </div>
+
+            {/* AI Recommendations */}
+            {!searchText && !selectedCategory && (
+                <RecommendationCarousel tenantSlug={slug} primaryColor={primaryColor} />
+            )}
 
             {/* Items count when searching */}
             {searchText && (

@@ -274,3 +274,99 @@ export const announcementAPI = {
 export const plansAPI = {
     list: () => api.get('/plans'),
 };
+
+// AI Analytics Assistant
+export const aiAPI = {
+    // Ask a question
+    ask: (question, conversationId = null) =>
+        api.post('/ai/analytics/ask', { question, conversation_id: conversationId }),
+
+    // Get proactive insights
+    insights: () => api.get('/ai/analytics/insights'),
+
+    // Get suggested questions
+    suggestions: () => api.get('/ai/analytics/suggestions'),
+
+    // Get AI usage stats
+    usage: () => api.get('/ai/analytics/usage'),
+
+    // Conversation history
+    conversations: () => api.get('/ai/analytics/conversations'),
+    conversation: (id) => api.get(`/ai/analytics/conversations/${id}`),
+    deleteConversation: (id) => api.delete(`/ai/analytics/conversations/${id}`),
+};
+
+// AI Sales Forecasting
+export const forecastAPI = {
+    // Get 7-day sales forecast
+    getForecast: (days = 7) => api.get('/ai/forecast', { params: { days } }),
+
+    // Get busy hours analysis
+    getBusyHours: () => api.get('/ai/forecast/busy-hours'),
+
+    // Get staffing recommendations
+    getStaffing: () => api.get('/ai/forecast/staffing'),
+};
+
+// Customer Chatbot (public, no auth)
+export const customerChatAPI = {
+    // Send a message to the chatbot
+    chat: (tenantSlug, message, sessionId = null) =>
+        api.post(`/customer/restaurant/${tenantSlug}/chat`, { message, session_id: sessionId }),
+
+    // Get initial suggestions
+    getSuggestions: (tenantSlug) =>
+        api.get(`/customer/restaurant/${tenantSlug}/chat/suggestions`),
+};
+
+// Smart Recommendations (public)
+export const recommendationAPI = {
+    // Get recommendations based on cart
+    get: (tenantSlug, cartItems = [], limit = 6) =>
+        api.post(`/customer/restaurant/${tenantSlug}/recommendations`, { cart: cartItems, limit }),
+
+    // Get frequently bought together items
+    getFrequentlyBoughtTogether: (tenantSlug, itemId, limit = 3) =>
+        api.get(`/customer/restaurant/${tenantSlug}/recommendations/${itemId}/fbt`, { params: { limit } }),
+};
+
+// AI Menu Description Generator
+export const menuDescriptionAPI = {
+    // Generate a description for a menu item
+    generate: (name, category = null, price = null, options = {}) =>
+        api.post('/ai/description/generate', { name, category, price, ...options }),
+
+    // Generate multiple alternatives
+    alternatives: (name, category = null, price = null, count = 3) =>
+        api.post('/ai/description/alternatives', { name, category, price, count }),
+
+    // Improve an existing description
+    improve: (name, description, category = null) =>
+        api.post('/ai/description/improve', { name, description, category }),
+
+    // Batch generate descriptions
+    batch: (items) =>
+        api.post('/ai/description/batch', { items }),
+
+    // Generate and optionally apply to menu item
+    generateForItem: (itemId, options = {}) =>
+        api.post(`/ai/description/menu-items/${itemId}`, options),
+};
+// AI Sentiment Analysis
+export const sentimentAPI = {
+    // Get sentiment overview for a period (7d, 14d, 30d, 90d)
+    getOverview: (period = '30d') =>
+        api.get('/ai/sentiment/overview', { params: { period } }),
+
+    // Get sentiment trends over time
+    getTrends: (days = 14) =>
+        api.get('/ai/sentiment/trends', { params: { days } }),
+
+    // Get negative feedback requiring attention
+    getNegativeFeedback: (limit = 10) =>
+        api.get('/ai/sentiment/negative', { params: { limit } }),
+
+    // Analyze a single text
+    analyze: (text) =>
+        api.post('/ai/sentiment/analyze', { text }),
+};

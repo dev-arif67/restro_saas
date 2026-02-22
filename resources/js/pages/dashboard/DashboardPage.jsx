@@ -4,6 +4,7 @@ import { dashboardAPI } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import StatusBadge from '../../components/ui/StatusBadge';
+import ForecastWidget from '../../components/ai/ForecastWidget';
 
 export default function DashboardPage() {
     const { user } = useAuthStore();
@@ -92,6 +93,13 @@ export default function DashboardPage() {
                             </div>
                         ))}
                     </div>
+                </div>
+            )}
+
+            {/* AI Sales Forecast (Restaurant Admin Only) */}
+            {user?.role === 'restaurant_admin' && (
+                <div className="mt-6">
+                    <ForecastWidget />
                 </div>
             )}
         </div>

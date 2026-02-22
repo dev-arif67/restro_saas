@@ -28,12 +28,17 @@ class CustomerController extends BaseApiController
             return $this->notFound('Restaurant not found');
         }
 
-        return $this->success($tenantModel->only([
+        $data = $tenantModel->only([
             'id', 'name', 'slug', 'logo', 'logo_dark', 'favicon',
             'primary_color', 'secondary_color', 'accent_color',
             'description', 'banner_image', 'social_links',
-            'currency', 'tax_rate',
-        ]));
+            'currency', 'tax_rate', 'default_vat_rate', 'vat_inclusive',
+        ]);
+
+        // Ensure tax_rate reflects the actual VAT rate used for calculations
+        $data['tax_rate'] = $tenantModel->default_vat_rate ?? $tenantModel->tax_rate ?? 0;
+
+        return $this->success($data);
     }
 
     /**
