@@ -13,6 +13,7 @@ use App\Models\Tenant;
 use App\Models\Voucher;
 use App\Services\BillingService;
 use App\Services\SslCommerzService;
+use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -162,6 +163,11 @@ class OrderController extends BaseApiController
 
         $order->update(['status' => $newStatus]);
 
+        AuditLogger::logAction('order_status_updated', $order, [
+            'old_status' => $oldStatus,
+            'new_status' => $newStatus,
+        ]);
+
         // If completed and dine-in, free the table
         if (in_array($newStatus, ['completed', 'cancelled']) && $order->table_id) {
             $hasOtherActiveOrders = Order::where('table_id', $order->table_id)
@@ -194,7 +200,9 @@ class OrderController extends BaseApiController
 
         $order->update(['status' => 'cancelled']);
 
-        // Free table if necessary
+        AuditLogger::logAction('order_cancelled', $order, [
+            'previous_status' => $order->getOriginal('status'),
+        ]);
         if ($order->table_id) {
             $hasOtherActiveOrders = Order::where('table_id', $order->table_id)
                 ->where('id', '!=', $order->id)
@@ -304,6 +312,11 @@ class OrderController extends BaseApiController
             'paid_at' => now(),
             'transaction_id' => $request->transaction_id ?? null,
             'payment_gateway' => $request->payment_gateway ?? ($order->payment_method === 'cash' ? 'counter' : null),
+        ]);
+
+        AuditLogger::logAction('payment_marked_paid', $order, [
+            'payment_method' => $order->payment_method,
+            'grand_total' => $order->grand_total,
         ]);
 
         return $this->success($order->fresh()->load(['items.menuItem', 'table', 'voucher']), 'Payment marked as paid');

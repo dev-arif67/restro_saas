@@ -15,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use Carbon\Carbon;
@@ -82,6 +83,8 @@ class TenantController extends BaseApiController
                 'status' => 'active',
             ]);
 
+            AuditLogger::logCreated($tenant);
+
             return $this->created([
                 'tenant' => $tenant->fresh()->load('activeSubscription'),
                 'admin' => $admin->fresh(),
@@ -111,12 +114,19 @@ class TenantController extends BaseApiController
         }
 
         $data = $request->validated();
+        $original = $tenant->toArray();
 
         if ($request->hasFile('logo')) {
+            // Delete old logo when replacing
+            if ($tenant->logo) {
+                Storage::disk('public')->delete($tenant->logo);
+            }
             $data['logo'] = $request->file('logo')->store('tenants/logos', 'public');
         }
 
         $tenant->update($data);
+
+        AuditLogger::logUpdated($tenant, $original);
 
         return $this->success($tenant->fresh(), 'Tenant updated successfully');
     }
@@ -130,6 +140,8 @@ class TenantController extends BaseApiController
         }
 
         $tenant->update(['is_active' => false]);
+
+        AuditLogger::logAction('tenant_deactivated', $tenant);
 
         return $this->success(null, 'Tenant deactivated successfully');
     }

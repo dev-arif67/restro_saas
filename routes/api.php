@@ -37,60 +37,31 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| Public Routes (No Authentication)
+| API Versioning
 |--------------------------------------------------------------------------
+| All routes are registered at both /api/ (backward compatible) and
+| /api/v1/ (versioned). New API versions can be added as v2, v3 etc.
+| Health-check and payment callbacks remain unversioned.
 */
 
-// Authentication
-Route::prefix('auth')->middleware('throttle:auth')->group(function () {
-    Route::post('register', [AuthController::class, 'register']);
-    Route::post('login', [AuthController::class, 'login']);
+// Unversioned Routes (must remain stable across versions)
+// Public Health Check (for load balancers / uptime monitors)
+Route::get('health', function () {
+    try {
+        \Illuminate\Support\Facades\DB::connection()->getPdo();
+        return response()->json([
+            'status' => 'healthy',
+            'timestamp' => now()->toIso8601String(),
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'unhealthy',
+            'timestamp' => now()->toIso8601String(),
+        ], 503);
+    }
 });
 
-// Platform branding (public, no auth)
-Route::get('platform/branding', [PlatformSettingController::class, 'branding']);
-
-// Public subscription plans (for registration page)
-Route::get('plans', [PlanController::class, 'index']);
-
-// Contact / Enquiry (public)
-Route::post('contact', [ContactController::class, 'store'])->middleware('throttle:contact');
-
-// Password Reset (public, rate limited)
-Route::prefix('auth')->middleware('throttle:auth')->group(function () {
-    Route::post('forgot-password', [PasswordResetController::class, 'sendResetLink']);
-    Route::post('reset-password', [PasswordResetController::class, 'resetPassword']);
-});
-
-// Customer-facing (public, no auth required)
-Route::prefix('customer')->group(function () {
-    Route::get('restaurant/{tenant}', [CustomerController::class, 'restaurant']);
-    Route::get('restaurant/{tenant}/menu', [CustomerController::class, 'menu']);
-    Route::get('restaurant/{tenant}/table/{table}', [CustomerController::class, 'table']);
-
-    // AI Chatbot (public)
-    Route::post('restaurant/{tenant}/chat', [CustomerChatController::class, 'chat']);
-    Route::get('restaurant/{tenant}/chat/suggestions', [CustomerChatController::class, 'suggestions']);
-
-    // Smart Recommendations
-    Route::post('restaurant/{tenant}/recommendations', [RecommendationController::class, 'index']);
-    Route::get('restaurant/{tenant}/recommendations/{itemId}/fbt', [RecommendationController::class, 'frequentlyBoughtTogether']);
-
-    // Place order (with WiFi validation)
-    Route::post('restaurant/{tenant}/order', [OrderController::class, 'store'])
-        ->middleware(['wifi.validate', 'throttle:customer-order']);
-
-    // Voucher validation
-    Route::post('voucher/validate', [VoucherController::class, 'validate']);
-
-    // Track order
-    Route::get('order/track/{orderNumber}', [OrderController::class, 'trackOrder']);
-
-    // Invoice (public)
-    Route::get('order/{orderNumber}/invoice', [OrderController::class, 'invoice']);
-});
-
-// SSLCommerz Payment Routes (public, callbacks from gateway)
+// SSLCommerz Payment Routes (public, callbacks from gateway — must be stable URLs)
 Route::prefix('payment/sslcommerz')->group(function () {
     Route::post('initiate', [PaymentController::class, 'initiate']);
     Route::post('success', [PaymentController::class, 'handleSuccess']);
@@ -109,244 +80,308 @@ Route::prefix('onboarding/payment')->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| Authenticated Routes
+| Versioned API Routes (v1)
 |--------------------------------------------------------------------------
+| Closure that registers all v1 routes. Mounted at both / and /v1/.
 */
+$v1Routes = function () {
 
-Route::middleware(['auth:api'])->group(function () {
+    /*
+    |----------------------------------------------------------------------
+    | Public Routes (No Authentication)
+    |----------------------------------------------------------------------
+    */
 
-    // Auth management
-    Route::prefix('auth')->group(function () {
-        Route::get('me', [AuthController::class, 'me']);
-        Route::post('logout', [AuthController::class, 'logout']);
-        Route::post('refresh', [AuthController::class, 'refresh']);
+    // Authentication
+    Route::prefix('auth')->middleware('throttle:auth')->group(function () {
+        Route::post('register', [AuthController::class, 'register']);
+        Route::post('login', [AuthController::class, 'login']);
     });
 
-    // Dashboard
-    Route::get('dashboard', [DashboardController::class, 'index']);
+    // Platform branding (public, no auth)
+    Route::get('platform/branding', [PlatformSettingController::class, 'branding']);
 
-    // User Profile
-    Route::prefix('profile')->group(function () {
-        Route::get('/', [ProfileController::class, 'show']);
-        Route::put('/', [ProfileController::class, 'update']);
-        Route::put('password', [ProfileController::class, 'changePassword']);
+    // Public subscription plans (for registration page)
+    Route::get('plans', [PlanController::class, 'index']);
+
+    // Contact / Enquiry (public)
+    Route::post('contact', [ContactController::class, 'store'])->middleware('throttle:contact');
+
+    // Password Reset (public, rate limited)
+    Route::prefix('auth')->middleware('throttle:auth')->group(function () {
+        Route::post('forgot-password', [PasswordResetController::class, 'sendResetLink']);
+        Route::post('reset-password', [PasswordResetController::class, 'resetPassword']);
     });
 
-    // Onboarding (for new restaurant_admin users without a tenant)
-    Route::prefix('onboarding')->group(function () {
-        Route::get('status', [OnboardingController::class, 'status']);
-        Route::post('setup-restaurant', [OnboardingController::class, 'setupRestaurant']);
-        Route::post('subscribe', [OnboardingController::class, 'initiateSubscription']);
+    // Customer-facing (public, no auth required)
+    Route::prefix('customer')->group(function () {
+        Route::get('restaurant/{tenant}', [CustomerController::class, 'restaurant']);
+        Route::get('restaurant/{tenant}/menu', [CustomerController::class, 'menu']);
+        Route::get('restaurant/{tenant}/table/{table}', [CustomerController::class, 'table']);
+
+        // AI Chatbot (public)
+        Route::post('restaurant/{tenant}/chat', [CustomerChatController::class, 'chat']);
+        Route::get('restaurant/{tenant}/chat/suggestions', [CustomerChatController::class, 'suggestions']);
+
+        // Smart Recommendations
+        Route::post('restaurant/{tenant}/recommendations', [RecommendationController::class, 'index']);
+        Route::get('restaurant/{tenant}/recommendations/{itemId}/fbt', [RecommendationController::class, 'frequentlyBoughtTogether']);
+
+        // Place order (with WiFi validation)
+        Route::post('restaurant/{tenant}/order', [OrderController::class, 'store'])
+            ->middleware(['wifi.validate', 'throttle:customer-order']);
+
+        // Voucher validation
+        Route::post('voucher/validate', [VoucherController::class, 'validate']);
+
+        // Track order
+        Route::get('order/track/{orderNumber}', [OrderController::class, 'trackOrder']);
+
+        // Invoice (public)
+        Route::get('order/{orderNumber}/invoice', [OrderController::class, 'invoice']);
     });
 
     /*
     |----------------------------------------------------------------------
-    | Tenant-scoped Routes (requires active tenant + subscription)
+    | Authenticated Routes
     |----------------------------------------------------------------------
     */
-    Route::middleware(['tenant', 'subscription'])->group(function () {
+    Route::middleware(['auth:api'])->group(function () {
 
-        // Menu Items
-        Route::apiResource('menu-items', MenuItemController::class);
-        Route::patch('menu-items/{id}/toggle', [MenuItemController::class, 'toggleAvailability']);
-        Route::post('menu-items/{id}/restore', [MenuItemController::class, 'restore']);
-
-        // Categories
-        Route::apiResource('categories', CategoryController::class);
-
-        // Tables
-        Route::apiResource('tables', TableController::class);
-        Route::post('tables/transfer', [TableController::class, 'transfer']);
-        Route::get('tables/{id}/qr', [TableController::class, 'generateQrCode']);
-        Route::get('tables/parcel-qr', [TableController::class, 'generateParcelQr']);
-
-        // Vouchers
-        Route::apiResource('vouchers', VoucherController::class);
-
-        // Orders (restaurant-side management)
-        Route::apiResource('orders', OrderController::class)->only(['index', 'show']);
-        Route::patch('orders/{id}/status', [OrderController::class, 'updateStatus']);
-        Route::post('orders/{id}/cancel', [OrderController::class, 'cancel']);
-        Route::post('orders/{id}/mark-paid', [OrderController::class, 'markPaid']);
-
-        // POS Terminal (staff + admin order creation)
-        Route::middleware('role:restaurant_admin,staff')->group(function () {
-            Route::post('pos/orders', [PosOrderController::class, 'store']);
+        // Auth management
+        Route::prefix('auth')->group(function () {
+            Route::get('me', [AuthController::class, 'me']);
+            Route::post('logout', [AuthController::class, 'logout']);
+            Route::post('refresh', [AuthController::class, 'refresh']);
         });
 
-        // Kitchen
-        Route::prefix('kitchen')->group(function () {
-            Route::get('orders', [KitchenController::class, 'activeOrders']);
-            Route::get('orders/{status}', [KitchenController::class, 'ordersByStatus']);
-            Route::post('orders/{id}/advance', [KitchenController::class, 'advanceOrder']);
-            Route::get('stats', [KitchenController::class, 'stats']);
+        // Dashboard
+        Route::get('dashboard', [DashboardController::class, 'index']);
+
+        // User Profile
+        Route::prefix('profile')->group(function () {
+            Route::get('/', [ProfileController::class, 'show']);
+            Route::put('/', [ProfileController::class, 'update']);
+            Route::put('password', [ProfileController::class, 'changePassword']);
         });
 
-        // Reports
-        Route::prefix('reports')->group(function () {
-            Route::get('sales', [ReportController::class, 'salesReport']);
-            Route::get('vouchers', [ReportController::class, 'voucherReport']);
-            Route::get('tables', [ReportController::class, 'tablePerformance']);
-            Route::get('trends', [ReportController::class, 'trendReport']);
-            Route::get('top-items', [ReportController::class, 'topSellingItems']);
-            Route::get('revenue-comparison', [ReportController::class, 'revenueComparison']);
-            Route::get('settlements', [ReportController::class, 'settlementReport']);
-
-            // VAT Reports
-            Route::get('vat/daily', [VatReportController::class, 'dailyZReport']);
-            Route::get('vat/monthly', [VatReportController::class, 'monthlyVatReport']);
+        // Onboarding (for new restaurant_admin users without a tenant)
+        Route::prefix('onboarding')->group(function () {
+            Route::get('status', [OnboardingController::class, 'status']);
+            Route::post('setup-restaurant', [OnboardingController::class, 'setupRestaurant']);
+            Route::post('subscribe', [OnboardingController::class, 'initiateSubscription']);
         });
 
-        // AI Analytics Assistant
-        Route::prefix('ai/analytics')->group(function () {
-            Route::post('ask', [AIAnalyticsController::class, 'ask']);
-            Route::get('insights', [AIAnalyticsController::class, 'insights']);
-            Route::get('suggestions', [AIAnalyticsController::class, 'suggestions']);
-            Route::get('usage', [AIAnalyticsController::class, 'usage']);
-            Route::get('conversations', [AIAnalyticsController::class, 'conversations']);
-            Route::get('conversations/{id}', [AIAnalyticsController::class, 'conversation']);
-            Route::delete('conversations/{id}', [AIAnalyticsController::class, 'deleteConversation']);
+        /*
+        |------------------------------------------------------------------
+        | Tenant-scoped Routes (requires active tenant + subscription)
+        |------------------------------------------------------------------
+        */
+        Route::middleware(['tenant', 'subscription'])->group(function () {
+
+            // Menu Items
+            Route::apiResource('menu-items', MenuItemController::class);
+            Route::patch('menu-items/{id}/toggle', [MenuItemController::class, 'toggleAvailability']);
+            Route::post('menu-items/{id}/restore', [MenuItemController::class, 'restore']);
+
+            // Categories
+            Route::apiResource('categories', CategoryController::class);
+
+            // Tables
+            Route::apiResource('tables', TableController::class);
+            Route::post('tables/transfer', [TableController::class, 'transfer']);
+            Route::get('tables/{id}/qr', [TableController::class, 'generateQrCode']);
+            Route::get('tables/parcel-qr', [TableController::class, 'generateParcelQr']);
+
+            // Vouchers
+            Route::apiResource('vouchers', VoucherController::class);
+
+            // Orders (restaurant-side management)
+            Route::apiResource('orders', OrderController::class)->only(['index', 'show']);
+            Route::patch('orders/{id}/status', [OrderController::class, 'updateStatus']);
+            Route::post('orders/{id}/cancel', [OrderController::class, 'cancel']);
+            Route::post('orders/{id}/mark-paid', [OrderController::class, 'markPaid']);
+
+            // POS Terminal (staff + admin order creation)
+            Route::middleware('role:restaurant_admin,staff')->group(function () {
+                Route::post('pos/orders', [PosOrderController::class, 'store']);
+            });
+
+            // Kitchen
+            Route::prefix('kitchen')->group(function () {
+                Route::get('orders', [KitchenController::class, 'activeOrders']);
+                Route::get('orders/{status}', [KitchenController::class, 'ordersByStatus']);
+                Route::post('orders/{id}/advance', [KitchenController::class, 'advanceOrder']);
+                Route::get('stats', [KitchenController::class, 'stats']);
+            });
+
+            // Reports
+            Route::prefix('reports')->group(function () {
+                Route::get('sales', [ReportController::class, 'salesReport']);
+                Route::get('vouchers', [ReportController::class, 'voucherReport']);
+                Route::get('tables', [ReportController::class, 'tablePerformance']);
+                Route::get('trends', [ReportController::class, 'trendReport']);
+                Route::get('top-items', [ReportController::class, 'topSellingItems']);
+                Route::get('revenue-comparison', [ReportController::class, 'revenueComparison']);
+                Route::get('settlements', [ReportController::class, 'settlementReport']);
+
+                // VAT Reports
+                Route::get('vat/daily', [VatReportController::class, 'dailyZReport']);
+                Route::get('vat/monthly', [VatReportController::class, 'monthlyVatReport']);
+            });
+
+            // AI Analytics Assistant
+            Route::prefix('ai/analytics')->group(function () {
+                Route::post('ask', [AIAnalyticsController::class, 'ask']);
+                Route::get('insights', [AIAnalyticsController::class, 'insights']);
+                Route::get('suggestions', [AIAnalyticsController::class, 'suggestions']);
+                Route::get('usage', [AIAnalyticsController::class, 'usage']);
+                Route::get('conversations', [AIAnalyticsController::class, 'conversations']);
+                Route::get('conversations/{id}', [AIAnalyticsController::class, 'conversation']);
+                Route::delete('conversations/{id}', [AIAnalyticsController::class, 'deleteConversation']);
+            });
+
+            // AI Sales Forecasting
+            Route::prefix('ai/forecast')->group(function () {
+                Route::get('/', [SalesForecastController::class, 'forecast']);
+                Route::get('busy-hours', [SalesForecastController::class, 'busyHours']);
+                Route::get('staffing', [SalesForecastController::class, 'staffing']);
+            });
+
+            // AI Menu Description Generator
+            Route::prefix('ai/description')->group(function () {
+                Route::post('generate', [MenuDescriptionController::class, 'generate']);
+                Route::post('alternatives', [MenuDescriptionController::class, 'alternatives']);
+                Route::post('improve', [MenuDescriptionController::class, 'improve']);
+                Route::post('batch', [MenuDescriptionController::class, 'batch']);
+                Route::post('menu-items/{id}', [MenuDescriptionController::class, 'generateAndApply']);
+            });
+
+            // AI Sentiment Analysis
+            Route::prefix('ai/sentiment')->group(function () {
+                Route::get('overview', [SentimentController::class, 'overview']);
+                Route::get('trends', [SentimentController::class, 'trends']);
+                Route::get('negative', [SentimentController::class, 'negativeFeedback']);
+                Route::post('analyze', [SentimentController::class, 'analyze']);
+            });
+
+            // Settlements
+            Route::get('settlements', [SettlementController::class, 'index']);
+            Route::get('settlements/{id}', [SettlementController::class, 'show']);
+
+            // Users: restaurant admin can manage own tenant's staff/kitchen users
+            Route::middleware('role:restaurant_admin')->group(function () {
+                Route::get('users', [UserController::class, 'index']);
+                Route::post('users', [UserController::class, 'store']);
+                Route::get('users/{id}', [UserController::class, 'show']);
+                Route::put('users/{id}', [UserController::class, 'update']);
+                Route::delete('users/{id}', [UserController::class, 'destroy']);
+            });
+
+            // Restaurant Branding (restaurant admin)
+            Route::middleware('role:restaurant_admin')->prefix('branding')->group(function () {
+                Route::get('/', [BrandingController::class, 'show']);
+                Route::post('/', [BrandingController::class, 'update']);
+            });
+
+            // Subscription status
+            Route::get('subscription/current', [SubscriptionController::class, 'currentSubscription']);
+            Route::post('subscription/pay', [SubscriptionController::class, 'initiatePayment']);
+            Route::post('subscription/callback', [SubscriptionController::class, 'paymentCallback']);
         });
 
-        // AI Sales Forecasting
-        Route::prefix('ai/forecast')->group(function () {
-            Route::get('/', [SalesForecastController::class, 'forecast']);
-            Route::get('busy-hours', [SalesForecastController::class, 'busyHours']);
-            Route::get('staffing', [SalesForecastController::class, 'staffing']);
+        /*
+        |------------------------------------------------------------------
+        | Super Admin Routes
+        |------------------------------------------------------------------
+        */
+        Route::middleware('role:super_admin')->prefix('admin')->group(function () {
+
+            // Tenant management
+            Route::apiResource('tenants', TenantController::class);
+            Route::get('tenants-dashboard', [TenantController::class, 'dashboard']);
+
+            // Subscriptions
+            Route::apiResource('subscriptions', SubscriptionController::class)->only(['index', 'store', 'show']);
+            Route::post('subscriptions/{id}/cancel', [SubscriptionController::class, 'cancel']);
+
+            // User management (super admin only)
+            Route::apiResource('users', UserController::class);
+
+            // Settlements
+            Route::get('all-settlements', [SettlementController::class, 'allSettlements']);
+            Route::post('settlements/{id}/payment', [SettlementController::class, 'addPayment']);
+
+            // Admin Settlements (enhanced)
+            Route::prefix('settlements')->group(function () {
+                Route::get('/', [\App\Http\Controllers\AdminSettlementController::class, 'index']);
+                Route::get('stats', [\App\Http\Controllers\AdminSettlementController::class, 'stats']);
+                Route::get('export', [\App\Http\Controllers\AdminSettlementController::class, 'export']);
+                Route::get('{settlement}', [\App\Http\Controllers\AdminSettlementController::class, 'show']);
+                Route::post('{settlement}/payment', [\App\Http\Controllers\AdminSettlementController::class, 'recordPayment']);
+            });
+
+            // Platform Settings / Branding
+            Route::prefix('settings')->group(function () {
+                Route::get('/', [PlatformSettingController::class, 'index']);
+                Route::post('/', [PlatformSettingController::class, 'update']);
+            });
+
+            // Contact Enquiries (super admin)
+            Route::prefix('enquiries')->group(function () {
+                Route::get('/', [\App\Http\Controllers\EnquiryController::class, 'index']);
+                Route::get('{enquiry}', [\App\Http\Controllers\EnquiryController::class, 'show']);
+                Route::patch('{enquiry}/read', [\App\Http\Controllers\EnquiryController::class, 'markRead']);
+                Route::patch('{enquiry}/status', [\App\Http\Controllers\EnquiryController::class, 'updateStatus']);
+                Route::post('{enquiry}/reply', [\App\Http\Controllers\EnquiryController::class, 'reply']);
+                Route::delete('{enquiry}', [\App\Http\Controllers\EnquiryController::class, 'destroy']);
+            });
+
+            // Advanced Tenant Management
+            Route::get('tenants/{id}/stats', [TenantController::class, 'stats']);
+            Route::post('tenants/{id}/impersonate', [TenantController::class, 'impersonate']);
+            Route::post('tenants/{id}/send-email', [TenantController::class, 'sendEmail']);
+            Route::post('tenants/bulk-action', [TenantController::class, 'bulkAction']);
+            Route::get('tenants/export', [TenantController::class, 'export']);
+
+            // Advanced Subscription Management
+            Route::get('subscriptions/expiring-soon', [SubscriptionController::class, 'expiringSoon']);
+            Route::post('subscriptions/{id}/extend', [SubscriptionController::class, 'extend']);
+            Route::post('subscriptions/{tenantId}/renew', [SubscriptionController::class, 'renewManual']);
+
+            // Subscription Plans
+            Route::apiResource('plans', PlanController::class);
+
+            // Announcements
+            Route::apiResource('announcements', AnnouncementController::class);
+            Route::post('announcements/{id}/send', [AnnouncementController::class, 'send']);
+
+            // System Management
+            Route::prefix('system')->group(function () {
+                Route::get('health', [SystemController::class, 'health']);
+                Route::get('info', [SystemController::class, 'info']);
+                Route::get('queue-stats', [SystemController::class, 'queueStats']);
+                Route::post('retry-failed-jobs', [SystemController::class, 'retryFailedJobs']);
+                Route::post('clear-cache', [SystemController::class, 'clearCache']);
+                Route::get('logs', [SystemController::class, 'logs']);
+            });
+
+            // Audit Logs
+            Route::prefix('audit-logs')->group(function () {
+                Route::get('/', [AuditLogController::class, 'index']);
+                Route::get('actions', [AuditLogController::class, 'actions']);
+                Route::get('stats', [AuditLogController::class, 'stats']);
+                Route::get('export', [AuditLogController::class, 'export']);
+                Route::get('{id}', [AuditLogController::class, 'show']);
+            });
         });
 
-        // AI Menu Description Generator
-        Route::prefix('ai/description')->group(function () {
-            Route::post('generate', [MenuDescriptionController::class, 'generate']);
-            Route::post('alternatives', [MenuDescriptionController::class, 'alternatives']);
-            Route::post('improve', [MenuDescriptionController::class, 'improve']);
-            Route::post('batch', [MenuDescriptionController::class, 'batch']);
-            Route::post('menu-items/{id}', [MenuDescriptionController::class, 'generateAndApply']);
-        });
-
-        // AI Sentiment Analysis
-        Route::prefix('ai/sentiment')->group(function () {
-            Route::get('overview', [SentimentController::class, 'overview']);
-            Route::get('trends', [SentimentController::class, 'trends']);
-            Route::get('negative', [SentimentController::class, 'negativeFeedback']);
-            Route::post('analyze', [SentimentController::class, 'analyze']);
-        });
-
-        // Settlements
-        Route::get('settlements', [SettlementController::class, 'index']);
-        Route::get('settlements/{id}', [SettlementController::class, 'show']);
-
-        // Users: restaurant admin can manage own tenant's staff/kitchen users
-        Route::middleware('role:restaurant_admin')->group(function () {
-            Route::get('users', [UserController::class, 'index']);
-            Route::post('users', [UserController::class, 'store']);
-            Route::get('users/{id}', [UserController::class, 'show']);
-            Route::put('users/{id}', [UserController::class, 'update']);
-            Route::delete('users/{id}', [UserController::class, 'destroy']);
-        });
-
-        // Restaurant Branding (restaurant admin)
-        Route::middleware('role:restaurant_admin')->prefix('branding')->group(function () {
-            Route::get('/', [BrandingController::class, 'show']);
-            Route::post('/', [BrandingController::class, 'update']);
-        });
-
-        // Subscription status
-        Route::get('subscription/current', [SubscriptionController::class, 'currentSubscription']);
-        Route::post('subscription/pay', [SubscriptionController::class, 'initiatePayment']);
-        Route::post('subscription/callback', [SubscriptionController::class, 'paymentCallback']);
+        // Active Announcements (for tenant dashboard)
+        Route::get('announcements/active', [AnnouncementController::class, 'active']);
+        Route::post('announcements/{id}/read', [AnnouncementController::class, 'markAsRead']);
     });
+};
 
-    /*
-    |----------------------------------------------------------------------
-    | Super Admin Routes
-    |----------------------------------------------------------------------
-    */
-    Route::middleware('role:super_admin')->prefix('admin')->group(function () {
-
-        // Tenant management
-        Route::apiResource('tenants', TenantController::class);
-        Route::get('tenants-dashboard', [TenantController::class, 'dashboard']);
-
-        // Subscriptions
-        Route::apiResource('subscriptions', SubscriptionController::class)->only(['index', 'store', 'show']);
-        Route::post('subscriptions/{id}/cancel', [SubscriptionController::class, 'cancel']);
-
-        // User management (super admin only)
-        Route::apiResource('users', UserController::class);
-
-        // Settlements
-        Route::get('all-settlements', [SettlementController::class, 'allSettlements']);
-        Route::post('settlements/{id}/payment', [SettlementController::class, 'addPayment']);
-
-        // Admin Settlements (enhanced)
-        Route::prefix('settlements')->group(function () {
-            Route::get('/', [\App\Http\Controllers\AdminSettlementController::class, 'index']);
-            Route::get('stats', [\App\Http\Controllers\AdminSettlementController::class, 'stats']);
-            Route::get('export', [\App\Http\Controllers\AdminSettlementController::class, 'export']);
-            Route::get('{settlement}', [\App\Http\Controllers\AdminSettlementController::class, 'show']);
-            Route::post('{settlement}/payment', [\App\Http\Controllers\AdminSettlementController::class, 'recordPayment']);
-        });
-
-        // Platform Settings / Branding
-        Route::prefix('settings')->group(function () {
-            Route::get('/', [PlatformSettingController::class, 'index']);
-            Route::post('/', [PlatformSettingController::class, 'update']);
-        });
-
-        // Contact Enquiries (super admin)
-        Route::prefix('enquiries')->group(function () {
-            Route::get('/', [\App\Http\Controllers\EnquiryController::class, 'index']);
-            Route::get('{enquiry}', [\App\Http\Controllers\EnquiryController::class, 'show']);
-            Route::patch('{enquiry}/read', [\App\Http\Controllers\EnquiryController::class, 'markRead']);
-            Route::patch('{enquiry}/status', [\App\Http\Controllers\EnquiryController::class, 'updateStatus']);
-            Route::post('{enquiry}/reply', [\App\Http\Controllers\EnquiryController::class, 'reply']);
-            Route::delete('{enquiry}', [\App\Http\Controllers\EnquiryController::class, 'destroy']);
-        });
-
-        // Advanced Tenant Management
-        Route::get('tenants/{id}/stats', [TenantController::class, 'stats']);
-        Route::post('tenants/{id}/impersonate', [TenantController::class, 'impersonate']);
-        Route::post('tenants/{id}/send-email', [TenantController::class, 'sendEmail']);
-        Route::post('tenants/bulk-action', [TenantController::class, 'bulkAction']);
-        Route::get('tenants/export', [TenantController::class, 'export']);
-
-        // Advanced Subscription Management
-        Route::get('subscriptions/expiring-soon', [SubscriptionController::class, 'expiringSoon']);
-        Route::post('subscriptions/{id}/extend', [SubscriptionController::class, 'extend']);
-        Route::post('subscriptions/{tenantId}/renew', [SubscriptionController::class, 'renewManual']);
-
-        // Subscription Plans
-        Route::apiResource('plans', PlanController::class);
-
-        // Announcements
-        Route::apiResource('announcements', AnnouncementController::class);
-        Route::post('announcements/{id}/send', [AnnouncementController::class, 'send']);
-
-        // System Management
-        Route::prefix('system')->group(function () {
-            Route::get('health', [SystemController::class, 'health']);
-            Route::get('info', [SystemController::class, 'info']);
-            Route::get('queue-stats', [SystemController::class, 'queueStats']);
-            Route::post('retry-failed-jobs', [SystemController::class, 'retryFailedJobs']);
-            Route::post('clear-cache', [SystemController::class, 'clearCache']);
-            Route::get('logs', [SystemController::class, 'logs']);
-        });
-
-        // Audit Logs
-        Route::prefix('audit-logs')->group(function () {
-            Route::get('/', [AuditLogController::class, 'index']);
-            Route::get('actions', [AuditLogController::class, 'actions']);
-            Route::get('stats', [AuditLogController::class, 'stats']);
-            Route::get('export', [AuditLogController::class, 'export']);
-            Route::get('{id}', [AuditLogController::class, 'show']);
-        });
-    });
-
-    // Active Announcements (for tenant dashboard)
-    Route::get('announcements/active', [AnnouncementController::class, 'active']);
-    Route::post('announcements/{id}/read', [AnnouncementController::class, 'markAsRead']);
-
-});
-// Artisan maintenance commands moved under super_admin protection
-// Access via: /api/admin/system/clear-cache, /api/admin/system/health etc.
+// Register v1 routes at root /api/ (backward compatible) and /api/v1/ (versioned)
+$v1Routes();
+Route::prefix('v1')->group($v1Routes);

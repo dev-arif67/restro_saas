@@ -42,7 +42,7 @@ class VatCalculationService
         }
 
         // Validate discount
-        $discount = (string) round($discount, 2);
+        $discount = number_format(round($discount, 2), 2, '.', '');
         if (bccomp($discount, $subtotal, 2) > 0) {
             throw new InvalidArgumentException('Discount cannot exceed subtotal.');
         }
@@ -55,7 +55,7 @@ class VatCalculationService
         $netAmount = bcsub($subtotal, $discount, 2);
 
         // Step 3: VAT calculation
-        $vatRateStr = (string) round($vatRate, 2);
+        $vatRateStr = number_format(round($vatRate, 2), 2, '.', '');
 
         if ($vatInclusive) {
             // VAT is already included in prices

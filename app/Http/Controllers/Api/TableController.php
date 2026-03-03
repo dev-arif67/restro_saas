@@ -9,6 +9,7 @@ use App\Http\Requests\TransferTableRequest;
 use App\Models\Order;
 use App\Models\RestaurantTable;
 use App\Models\Tenant;
+use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -46,6 +47,8 @@ class TableController extends BaseApiController
             'qr_code' => $this->generateQrIdentifier($tenantId, $request->table_number),
         ]);
 
+        AuditLogger::logCreated($table);
+
         return $this->created($table, 'Table created');
     }
 
@@ -68,7 +71,10 @@ class TableController extends BaseApiController
             return $this->notFound('Table not found');
         }
 
+        $original = $table->toArray();
         $table->update($request->validated());
+
+        AuditLogger::logUpdated($table, $original);
 
         return $this->success($table->fresh(), 'Table updated');
     }
@@ -84,6 +90,8 @@ class TableController extends BaseApiController
         if ($table->activeOrders()->exists()) {
             return $this->error('Cannot delete table with active orders', 422);
         }
+
+        AuditLogger::logDeleted($table);
 
         $table->delete();
 
@@ -114,6 +122,11 @@ class TableController extends BaseApiController
         $toTable->markOccupied();
 
         broadcast(new TableTransferred($fromTable, $toTable))->toOthers();
+
+        AuditLogger::logAction('table_transferred', $fromTable, [
+            'from_table_id' => $fromTable->id,
+            'to_table_id' => $toTable->id,
+        ]);
 
         return $this->success([
             'from_table' => $fromTable->fresh(),

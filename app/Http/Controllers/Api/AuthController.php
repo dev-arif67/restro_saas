@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\User;
+use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -33,6 +34,8 @@ class AuthController extends BaseApiController
             auth()->logout();
             return $this->error('Account is inactive. Contact administrator.', 403);
         }
+
+        AuditLogger::logLogin();
 
         return $this->respondWithToken($token);
     }
@@ -83,6 +86,8 @@ class AuthController extends BaseApiController
 
     public function logout(): JsonResponse
     {
+        AuditLogger::logAction('logout', auth()->user());
+
         auth()->logout();
         return $this->success(null, 'Logged out successfully');
     }

@@ -26,8 +26,8 @@ beforeEach(function () {
 
     Subscription::create([
         'tenant_id'  => $this->tenant->id,
-        'plan'       => 'monthly',
-        'price'      => 999,
+        'plan_type'  => 'monthly',
+        'amount'     => 999,
         'status'     => 'active',
         'starts_at'  => now()->subDays(5),
         'expires_at' => now()->addDays(25),

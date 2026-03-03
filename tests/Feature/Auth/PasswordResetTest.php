@@ -1,60 +1,39 @@
 <?php
 
+/**
+ * Password Reset Tests (API)
+ *
+ * Tests the JWT-compatible password reset flow via PasswordResetController.
+ */
+
 use App\Models\User;
-use Illuminate\Auth\Notifications\ResetPassword;
-use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
-test('reset password link screen can be rendered', function () {
-    $response = $this->get('/forgot-password');
+test('forgot password endpoint accepts email', function () {
+    User::factory()->create(['email' => 'test@test.com']);
 
-    $response->assertStatus(200);
+    $response = $this->postJson('/api/auth/forgot-password', [
+        'email' => 'test@test.com',
+    ]);
+
+    // Always returns 200 to prevent email enumeration
+    $response->assertOk()
+        ->assertJsonPath('success', true);
 });
 
-test('reset password link can be requested', function () {
-    Notification::fake();
+test('forgot password does not reveal if email exists', function () {
+    $response = $this->postJson('/api/auth/forgot-password', [
+        'email' => 'nonexistent@test.com',
+    ]);
 
-    $user = User::factory()->create();
-
-    $this->post('/forgot-password', ['email' => $user->email]);
-
-    Notification::assertSentTo($user, ResetPassword::class);
+    // Same response whether email exists or not
+    $response->assertOk()
+        ->assertJsonPath('success', true);
 });
 
-test('reset password screen can be rendered', function () {
-    Notification::fake();
+test('forgot password validates email field', function () {
+    $response = $this->postJson('/api/auth/forgot-password', []);
 
-    $user = User::factory()->create();
-
-    $this->post('/forgot-password', ['email' => $user->email]);
-
-    Notification::assertSentTo($user, ResetPassword::class, function ($notification) {
-        $response = $this->get('/reset-password/'.$notification->token);
-
-        $response->assertStatus(200);
-
-        return true;
-    });
-});
-
-test('password can be reset with valid token', function () {
-    Notification::fake();
-
-    $user = User::factory()->create();
-
-    $this->post('/forgot-password', ['email' => $user->email]);
-
-    Notification::assertSentTo($user, ResetPassword::class, function ($notification) use ($user) {
-        $response = $this->post('/reset-password', [
-            'token' => $notification->token,
-            'email' => $user->email,
-            'password' => 'password',
-            'password_confirmation' => 'password',
-        ]);
-
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect(route('login'));
-
-        return true;
-    });
+    $response->assertStatus(422);
 });

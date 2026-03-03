@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\StoreUserRequest;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -81,6 +82,8 @@ class UserController extends BaseApiController
 
         $user = User::create($data);
 
+        AuditLogger::logCreated($user);
+
         return $this->created($user->load('tenant:id,name'), 'User created');
     }
 
@@ -140,7 +143,10 @@ class UserController extends BaseApiController
             ]);
         }
 
+        $original = $user->toArray();
         $user->update($validated);
+
+        AuditLogger::logUpdated($user, $original);
 
         return $this->success($user->fresh()->load('tenant:id,name'), 'User updated');
     }
@@ -173,6 +179,8 @@ class UserController extends BaseApiController
         }
 
         $user->update(['status' => 'inactive']);
+
+        AuditLogger::logAction('user_deactivated', $user);
 
         return $this->success(null, 'User deactivated');
     }

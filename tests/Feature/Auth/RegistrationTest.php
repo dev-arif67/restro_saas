@@ -1,19 +1,40 @@
 <?php
 
-test('registration screen can be rendered', function () {
-    $response = $this->get('/register');
+/**
+ * Registration Tests (API)
+ *
+ * Tests API user registration endpoint.
+ */
 
-    $response->assertStatus(200);
-});
-
-test('new users can register', function () {
-    $response = $this->post('/register', [
+test('new users can register via api', function () {
+    $response = $this->postJson('/api/auth/register', [
         'name' => 'Test User',
         'email' => 'test@example.com',
-        'password' => 'password',
-        'password_confirmation' => 'password',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
     ]);
 
-    $this->assertAuthenticated();
-    $response->assertRedirect(route('dashboard', absolute: false));
+    $response->assertStatus(201)
+        ->assertJsonStructure(['access_token', 'user']);
+});
+
+test('registration requires valid email', function () {
+    $response = $this->postJson('/api/auth/register', [
+        'name' => 'Test',
+        'email' => 'not-an-email',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
+    ]);
+
+    $response->assertStatus(422);
+});
+
+test('registration requires password confirmation', function () {
+    $response = $this->postJson('/api/auth/register', [
+        'name' => 'Test',
+        'email' => 'test@example.com',
+        'password' => 'password123',
+    ]);
+
+    $response->assertStatus(422);
 });
