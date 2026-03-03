@@ -122,34 +122,103 @@ class SubscriptionController extends BaseApiController
     }
 
     /**
-     * Payment initiation (bKash / SSLCommerz)
+     * Payment initiation for subscription renewal (bKash / SSLCommerz).
+     * Requires tenant with existing subscription (renewal flow).
      */
     public function initiatePayment(Request $request): JsonResponse
     {
         $request->validate([
-            'plan_type' => 'required|in:monthly,yearly,custom',
-            'payment_method' => 'required|in:bkash,sslcommerz',
+            'plan_id' => 'required|exists:subscription_plans,id',
+            'payment_method' => 'nullable|in:sslcommerz,manual',
         ]);
 
-        $amount = match ($request->plan_type) {
-            'monthly' => config('saas.plans.monthly.price', 999),
-            'yearly' => config('saas.plans.yearly.price', 9999),
-            'custom' => $request->get('custom_amount', 999),
-        };
+        $user = auth()->user();
+        $tenant = $user->tenant;
 
-        // Return payment URL/config for frontend to handle
-        // In production, integrate with bKash/SSLCommerz SDK
+        if (!$tenant) {
+            return $this->error('No restaurant found. Please complete onboarding first.', 422);
+        }
+
+        $plan = \App\Models\SubscriptionPlan::findOrFail($request->plan_id);
+        $paymentMethod = $request->payment_method ?? 'sslcommerz';
+
+        $tranId = 'RENEW-' . $tenant->id . '-' . time() . '-' . \Illuminate\Support\Str::random(6);
+
+        // Store pending renewal data
+        $renewalData = [
+            'tenant_id' => $tenant->id,
+            'plan_id' => $plan->id,
+            'plan_type' => $plan->slug,
+            'amount' => $plan->price,
+            'duration_days' => $plan->duration_days,
+            'tran_id' => $tranId,
+        ];
+
+        cache()->put("subscription_payment:{$tranId}", $renewalData, now()->addMinutes(30));
+
+        $sslCommerz = new \App\Services\SslCommerzService();
+
+        if (!$sslCommerz->isEnabled() || $paymentMethod === 'manual') {
+            // Direct activation for dev/testing or manual payment
+            Subscription::withoutGlobalScopes()
+                ->where('tenant_id', $tenant->id)
+                ->where('status', 'active')
+                ->update(['status' => 'expired']);
+
+            $subscription = Subscription::withoutGlobalScopes()->create([
+                'tenant_id' => $tenant->id,
+                'plan_id' => $plan->id,
+                'plan_type' => $plan->slug,
+                'amount' => $plan->price,
+                'payment_method' => 'manual',
+                'transaction_id' => $tranId,
+                'starts_at' => now(),
+                'expires_at' => now()->addDays($plan->duration_days),
+                'status' => 'active',
+                'notes' => 'Self-service renewal (payment gateway not configured)',
+            ]);
+
+            Tenant::where('id', $tenant->id)->update(['is_active' => true]);
+
+            cache()->forget("subscription_payment:{$tranId}");
+
+            return $this->created([
+                'subscription' => $subscription->load('tenant:id,name'),
+                'plan' => $plan,
+            ], 'Subscription renewed successfully.');
+        }
+
+        $baseUrl = config('app.url');
+
+        $paymentResult = $sslCommerz->initiatePayment([
+            'amount' => $plan->price,
+            'currency' => $tenant->currency ?? 'BDT',
+            'tran_id' => $tranId,
+            'success_url' => "{$baseUrl}/api/onboarding/payment/success",
+            'fail_url' => "{$baseUrl}/api/onboarding/payment/fail",
+            'cancel_url' => "{$baseUrl}/api/onboarding/payment/cancel",
+            'ipn_url' => "{$baseUrl}/api/onboarding/payment/ipn",
+            'customer_name' => $user->name,
+            'customer_email' => $user->email,
+            'customer_phone' => $tenant->phone ?? '01700000000',
+            'product_name' => "Subscription Renewal: {$plan->name}",
+            'num_items' => 1,
+        ]);
+
+        if (!$paymentResult['success']) {
+            return $this->error('Payment initiation failed. Please try again.', 500);
+        }
+
         return $this->success([
-            'plan_type' => $request->plan_type,
-            'amount' => $amount,
-            'payment_method' => $request->payment_method,
-            'payment_url' => '#', // Replace with actual payment gateway URL
-            'reference' => 'PAY-' . uniqid(),
-        ]);
+            'payment_url' => $paymentResult['gateway_url'],
+            'tran_id' => $tranId,
+            'plan' => $plan,
+            'amount' => $plan->price,
+        ], 'Redirect to payment gateway to complete renewal.');
     }
 
     /**
-     * Payment callback handler
+     * Payment callback handler (legacy endpoint, kept for backward compatibility).
      */
     public function paymentCallback(Request $request): JsonResponse
     {
@@ -163,10 +232,19 @@ class SubscriptionController extends BaseApiController
             return $this->error('Payment failed');
         }
 
-        // Verify with payment gateway in production
-        // Then create subscription
+        // Check if subscription was already created via IPN/redirect callback
+        $existing = Subscription::withoutGlobalScopes()
+            ->where('transaction_id', $request->transaction_id)
+            ->where('status', 'active')
+            ->first();
 
-        return $this->success(null, 'Payment processed. Subscription will be activated.');
+        if ($existing) {
+            return $this->success([
+                'subscription' => $existing->load('tenant:id,name'),
+            ], 'Subscription already active.');
+        }
+
+        return $this->error('Payment could not be verified. Please contact support.', 422);
     }
 
     /**

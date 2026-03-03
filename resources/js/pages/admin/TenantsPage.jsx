@@ -9,10 +9,16 @@ import toast from 'react-hot-toast';
 export default function TenantsPage() {
     const queryClient = useQueryClient();
     const [showOnboard, setShowOnboard] = useState(false);
+    const [selectedPlan, setSelectedPlan] = useState(null);
 
     const { data, isLoading } = useQuery({
         queryKey: ['admin-tenants'],
         queryFn: () => adminAPI.tenants.list().then((r) => r.data.data),
+    });
+
+    const { data: plans } = useQuery({
+        queryKey: ['admin-plans'],
+        queryFn: () => adminAPI.plans.list().then((r) => r.data.data),
     });
 
     const onboardMutation = useMutation({
@@ -36,6 +42,7 @@ export default function TenantsPage() {
     const handleOnboard = (e) => {
         e.preventDefault();
         const formData = Object.fromEntries(new FormData(e.target));
+        const plan = plans?.find((p) => p.id === parseInt(formData.plan_id));
         const d = {
             name: formData.name,
             email: formData.email,
@@ -45,8 +52,8 @@ export default function TenantsPage() {
             admin_name: formData.admin_name,
             admin_email: formData.admin_email,
             admin_password: formData.admin_password,
-            plan_type: formData.plan_type,
-            subscription_amount: parseFloat(formData.subscription_amount || 0),
+            plan_type: plan?.slug || 'monthly',
+            subscription_amount: plan ? parseFloat(plan.price) : parseFloat(formData.subscription_amount || 0),
             payment_method: formData.payment_method || 'manual',
         };
         onboardMutation.mutate(d);
@@ -154,12 +161,17 @@ export default function TenantsPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label className="label">Plan</label>
-                            <select name="plan_type" className="input">
-                                <option value="monthly">Monthly</option>
-                                <option value="yearly">Yearly</option>
+                            <select name="plan_id" className="input" required onChange={(e) => setSelectedPlan(plans?.find((p) => p.id === parseInt(e.target.value)))}>
+                                <option value="">Select a plan</option>
+                                {plans?.map((p) => (
+                                    <option key={p.id} value={p.id}>{p.name} — ৳{Number(p.price).toLocaleString()} / {p.duration_days} days</option>
+                                ))}
                             </select>
                         </div>
-                        <div><label className="label">Amount</label><input name="subscription_amount" type="number" className="input" required /></div>
+                        <div>
+                            <label className="label">Amount</label>
+                            <input name="subscription_amount" type="number" className="input" value={selectedPlan ? selectedPlan.price : ''} readOnly />
+                        </div>
                     </div>
 
                     <div className="flex gap-3 pt-2">

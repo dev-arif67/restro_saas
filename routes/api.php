@@ -15,11 +15,14 @@ use App\Http\Controllers\Api\KitchenController;
 use App\Http\Controllers\Api\MenuDescriptionController;
 use App\Http\Controllers\Api\SentimentController;
 use App\Http\Controllers\Api\MenuItemController;
+use App\Http\Controllers\Api\OnboardingController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PlanController;
 use App\Http\Controllers\Api\PlatformSettingController;
 use App\Http\Controllers\Api\PosOrderController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\RecommendationController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SettlementController;
@@ -30,7 +33,6 @@ use App\Http\Controllers\Api\TenantController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\VatReportController;
 use App\Http\Controllers\Api\VoucherController;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -40,7 +42,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Authentication
-Route::prefix('auth')->group(function () {
+Route::prefix('auth')->middleware('throttle:auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
     Route::post('login', [AuthController::class, 'login']);
 });
@@ -52,7 +54,13 @@ Route::get('platform/branding', [PlatformSettingController::class, 'branding']);
 Route::get('plans', [PlanController::class, 'index']);
 
 // Contact / Enquiry (public)
-Route::post('contact', [ContactController::class, 'store']);
+Route::post('contact', [ContactController::class, 'store'])->middleware('throttle:contact');
+
+// Password Reset (public, rate limited)
+Route::prefix('auth')->middleware('throttle:auth')->group(function () {
+    Route::post('forgot-password', [PasswordResetController::class, 'sendResetLink']);
+    Route::post('reset-password', [PasswordResetController::class, 'resetPassword']);
+});
 
 // Customer-facing (public, no auth required)
 Route::prefix('customer')->group(function () {
@@ -70,7 +78,7 @@ Route::prefix('customer')->group(function () {
 
     // Place order (with WiFi validation)
     Route::post('restaurant/{tenant}/order', [OrderController::class, 'store'])
-        ->middleware('wifi.validate');
+        ->middleware(['wifi.validate', 'throttle:customer-order']);
 
     // Voucher validation
     Route::post('voucher/validate', [VoucherController::class, 'validate']);
@@ -91,6 +99,14 @@ Route::prefix('payment/sslcommerz')->group(function () {
     Route::post('ipn', [PaymentController::class, 'ipn']);
 });
 
+// Onboarding Payment Callbacks (public, from SSLCommerz gateway redirects)
+Route::prefix('onboarding/payment')->group(function () {
+    Route::post('success', [OnboardingController::class, 'paymentSuccess']);
+    Route::post('fail', [OnboardingController::class, 'paymentFail']);
+    Route::post('cancel', [OnboardingController::class, 'paymentCancel']);
+    Route::post('ipn', [OnboardingController::class, 'paymentIpn']);
+});
+
 /*
 |--------------------------------------------------------------------------
 | Authenticated Routes
@@ -108,6 +124,20 @@ Route::middleware(['auth:api'])->group(function () {
 
     // Dashboard
     Route::get('dashboard', [DashboardController::class, 'index']);
+
+    // User Profile
+    Route::prefix('profile')->group(function () {
+        Route::get('/', [ProfileController::class, 'show']);
+        Route::put('/', [ProfileController::class, 'update']);
+        Route::put('password', [ProfileController::class, 'changePassword']);
+    });
+
+    // Onboarding (for new restaurant_admin users without a tenant)
+    Route::prefix('onboarding')->group(function () {
+        Route::get('status', [OnboardingController::class, 'status']);
+        Route::post('setup-restaurant', [OnboardingController::class, 'setupRestaurant']);
+        Route::post('subscribe', [OnboardingController::class, 'initiateSubscription']);
+    });
 
     /*
     |----------------------------------------------------------------------
@@ -318,24 +348,5 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('announcements/{id}/read', [AnnouncementController::class, 'markAsRead']);
 
 });
-Route::get('/clear-cache', function () {
-    Artisan::call('cache:clear');
-    Artisan::call('config:clear');
-    Artisan::call('route:clear');
-    Artisan::call('view:clear');
-    return response()->json(['message' => 'Cache cleared']);
-});
-Route::get('/optimize:clear', function () {
-    Artisan::call('optimize:clear');
-    return response()->json(['message' => 'Optimization cache cleared']);
-});
-
-Route::get('/storage-link', function () {
-    Artisan::call('storage:link');
-    return response()->json(['message' => 'Storage linked']);
-});
-
-Route::get('/migrate', function () {
-    Artisan::call('migrate', ['--force' => true]);
-    return response()->json(['message' => 'Migrations run']);
-});
+// Artisan maintenance commands moved under super_admin protection
+// Access via: /api/admin/system/clear-cache, /api/admin/system/health etc.

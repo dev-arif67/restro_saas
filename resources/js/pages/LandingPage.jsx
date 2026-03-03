@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useBrandingStore } from '../stores/brandingStore';
-import { contactAPI } from '../services/api';
+import { contactAPI, plansAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import {
     HiOutlineDevicePhoneMobile,
@@ -123,57 +124,6 @@ const extraBenefits = [
     },
 ];
 
-// ── Pricing ──
-const pricingPlans = [
-    {
-        name: 'Starter',
-        price: '1,999',
-        period: '/month',
-        description: 'Great for small cafés and new restaurants',
-        features: [
-            'Up to 10 Tables',
-            'QR Code Ordering',
-            'POS Terminal',
-            'Kitchen Display',
-            'Basic Sales Reports',
-            'Email Support',
-        ],
-        highlighted: false,
-    },
-    {
-        name: 'Professional',
-        price: '4,999',
-        period: '/month',
-        description: 'Best for busy restaurants that want it all',
-        features: [
-            'Unlimited Tables',
-            'All Starter Features',
-            'Online Payments (SSLCommerz)',
-            'Advanced Analytics & Reports',
-            'Multiple Staff Accounts',
-            'AI Menu Assistant',
-            'Voucher Management',
-            'Priority Support',
-        ],
-        highlighted: true,
-    },
-    {
-        name: 'Enterprise',
-        price: 'Custom',
-        period: '',
-        description: 'For chains, franchises, and large operations',
-        features: [
-            'Everything in Professional',
-            'Multiple Locations',
-            'Dedicated Account Manager',
-            'Custom Integrations',
-            'SLA Guarantee',
-            'On-site Training',
-        ],
-        highlighted: false,
-    },
-];
-
 // ── How it works ──
 const steps = [
     { number: '01', title: 'Sign Up', description: 'Create your restaurant account in under a minute — no credit card required.' },
@@ -216,6 +166,21 @@ export default function LandingPage() {
     const [form, setForm] = useState({ name: '', email: '', phone: '', restaurant_name: '', message: '' });
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
+
+    const { data: plans } = useQuery({
+        queryKey: ['public-plans'],
+        queryFn: () => plansAPI.list().then((r) => r.data.data),
+    });
+
+    const formatPrice = (price) => {
+        return Number(price).toLocaleString('en-BD');
+    };
+
+    const getDurationLabel = (days) => {
+        if (days === 30 || days === 31) return '/month';
+        if (days === 365 || days === 366) return '/year';
+        return `/${days} days`;
+    };
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -431,50 +396,50 @@ export default function LandingPage() {
                         <p className="mt-4 text-gray-500 text-lg">No hidden fees. Pick a plan, start today, upgrade anytime.</p>
                     </div>
 
-                    <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-                        {pricingPlans.map((plan, i) => (
-                            <div
-                                key={i}
-                                className={`rounded-2xl p-8 ${plan.highlighted ? 'bg-white shadow-2xl border-2 scale-105 relative' : 'bg-white shadow-lg border border-gray-100'}`}
-                                style={{ borderColor: plan.highlighted ? PRIMARY_COLOR : undefined }}
-                            >
-                                {plan.highlighted && (
-                                    <div
-                                        className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-white text-sm font-medium"
-                                        style={{ backgroundColor: PRIMARY_COLOR }}
-                                    >
-                                        Most Popular
-                                    </div>
-                                )}
-                                <h3 className="text-xl font-bold text-gray-900 mb-2">{plan.name}</h3>
-                                <p className="text-gray-500 text-sm mb-4">{plan.description}</p>
-                                <div className="mb-6">
-                                    {plan.price === 'Custom' ? (
-                                        <span className="text-4xl font-bold text-gray-900">Custom</span>
-                                    ) : (
-                                        <>
-                                            <span className="text-4xl font-bold text-gray-900">৳{plan.price}</span>
-                                            <span className="text-gray-500">{plan.period}</span>
-                                        </>
-                                    )}
-                                </div>
-                                <ul className="space-y-3 mb-8">
-                                    {plan.features.map((feature, j) => (
-                                        <li key={j} className="flex items-center gap-3 text-sm text-gray-600">
-                                            <HiOutlineCheckBadge className="w-5 h-5 flex-shrink-0" style={{ color: PRIMARY_COLOR }} />
-                                            {feature}
-                                        </li>
-                                    ))}
-                                </ul>
-                                <a
-                                    href="#contact"
-                                    className={`block text-center py-3 rounded-xl font-semibold transition-all ${plan.highlighted ? 'text-white hover:opacity-90' : 'text-gray-700 border border-gray-200 hover:border-gray-300'}`}
-                                    style={{ backgroundColor: plan.highlighted ? PRIMARY_COLOR : 'white' }}
+                    <div className={`grid gap-8 max-w-5xl mx-auto ${plans?.length === 1 ? 'md:grid-cols-1 max-w-md' : plans?.length === 2 ? 'md:grid-cols-2 max-w-3xl' : 'md:grid-cols-3'}`}>
+                        {plans?.map((plan, i) => {
+                            const isMiddle = plans.length >= 3 && i === Math.floor(plans.length / 2);
+                            const features = plan.features || [];
+                            return (
+                                <div
+                                    key={plan.id}
+                                    className={`rounded-2xl p-8 ${isMiddle ? 'bg-white shadow-2xl border-2 scale-105 relative' : 'bg-white shadow-lg border border-gray-100'}`}
+                                    style={{ borderColor: isMiddle ? PRIMARY_COLOR : undefined }}
                                 >
-                                    {plan.price === 'Custom' ? 'Contact Us' : 'Get Started'}
-                                </a>
-                            </div>
-                        ))}
+                                    {isMiddle && (
+                                        <div
+                                            className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-white text-sm font-medium"
+                                            style={{ backgroundColor: PRIMARY_COLOR }}
+                                        >
+                                            Most Popular
+                                        </div>
+                                    )}
+                                    <h3 className="text-xl font-bold text-gray-900 mb-2">{plan.name}</h3>
+                                    <p className="text-gray-500 text-sm mb-4">Up to {plan.max_users} staff accounts</p>
+                                    <div className="mb-6">
+                                        <span className="text-4xl font-bold text-gray-900">৳{formatPrice(plan.price)}</span>
+                                        <span className="text-gray-500">{getDurationLabel(plan.duration_days)}</span>
+                                    </div>
+                                    {features.length > 0 && (
+                                        <ul className="space-y-3 mb-8">
+                                            {features.map((feature, j) => (
+                                                <li key={j} className="flex items-center gap-3 text-sm text-gray-600">
+                                                    <HiOutlineCheckBadge className="w-5 h-5 flex-shrink-0" style={{ color: PRIMARY_COLOR }} />
+                                                    {feature}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                    <a
+                                        href="#contact"
+                                        className={`block text-center py-3 rounded-xl font-semibold transition-all ${isMiddle ? 'text-white hover:opacity-90' : 'text-gray-700 border border-gray-200 hover:border-gray-300'}`}
+                                        style={{ backgroundColor: isMiddle ? PRIMARY_COLOR : 'white' }}
+                                    >
+                                        Get Started
+                                    </a>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             </section>

@@ -2,14 +2,17 @@
 
 namespace App\Jobs;
 
+use App\Mail\SubscriptionExpiredMail;
 use App\Models\Subscription;
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class CheckSubscriptionExpiry implements ShouldQueue
 {
@@ -21,6 +24,7 @@ class CheckSubscriptionExpiry implements ShouldQueue
 
         // Find expired active subscriptions (use today() for date columns)
         $expired = Subscription::withoutGlobalScopes()
+            ->with('tenant')
             ->where('status', 'active')
             ->where('expires_at', '<', today())
             ->get();
@@ -42,9 +46,45 @@ class CheckSubscriptionExpiry implements ShouldQueue
                     ->update(['is_active' => false]);
 
                 Log::info("Tenant {$subscription->tenant_id} deactivated due to expired subscription.");
+
+                // Send expiry notification email
+                $this->sendExpiryEmail($subscription);
             }
         }
 
         Log::info("Processed {$expired->count()} expired subscriptions.");
+    }
+
+    /**
+     * Send subscription expired email to tenant admins.
+     */
+    protected function sendExpiryEmail(Subscription $subscription): void
+    {
+        $tenant = $subscription->tenant;
+
+        if (!$tenant) {
+            return;
+        }
+
+        $adminEmails = User::where('tenant_id', $tenant->id)
+            ->where('role', User::ROLE_RESTAURANT_ADMIN)
+            ->where('status', 'active')
+            ->pluck('email')
+            ->toArray();
+
+        if (empty($adminEmails)) {
+            $adminEmails = [$tenant->email];
+        }
+
+        foreach ($adminEmails as $email) {
+            try {
+                Mail::to($email)->send(new SubscriptionExpiredMail(
+                    tenant: $tenant,
+                    subscription: $subscription,
+                ));
+            } catch (\Exception $e) {
+                Log::error("Failed to send expiry email to {$email} for tenant {$tenant->id}: " . $e->getMessage());
+            }
+        }
     }
 }
