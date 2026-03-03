@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\BaseApiController;
-use App\Jobs\SendAnnouncementEmail;
 use App\Models\Announcement;
 use App\Models\Tenant;
 use App\Models\User;
