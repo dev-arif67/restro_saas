@@ -11,6 +11,7 @@ use App\Models\Settlement;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Models\Voucher;
+use App\Models\PosShift;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -41,6 +42,7 @@ class Tenant extends Model
         'vat_registered',
         'vat_number',
         'default_vat_rate',
+        'default_sd_rate',
         'vat_inclusive',
         'is_active',
         'max_users',
@@ -53,6 +55,7 @@ class Tenant extends Model
             'tax_rate' => 'decimal:2',
             'vat_registered' => 'boolean',
             'default_vat_rate' => 'decimal:2',
+            'default_sd_rate' => 'decimal:2',
             'vat_inclusive' => 'boolean',
             'is_active' => 'boolean',
             'max_users' => 'integer',
@@ -104,6 +107,11 @@ class Tenant extends Model
     public function invoiceCounter()
     {
         return $this->hasOne(InvoiceCounter::class);
+    }
+
+    public function shifts()
+    {
+        return $this->hasMany(PosShift::class);
     }
 
     public function activeSubscription()

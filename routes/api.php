@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PlanController;
 use App\Http\Controllers\Api\PlatformSettingController;
 use App\Http\Controllers\Api\PosOrderController;
+use App\Http\Controllers\Api\PosShiftController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\RecommendationController;
 use App\Http\Controllers\Api\ReportController;
@@ -205,6 +206,10 @@ $v1Routes = function () {
             // POS Terminal (staff + admin order creation)
             Route::middleware('role:restaurant_admin,staff')->group(function () {
                 Route::post('pos/orders', [PosOrderController::class, 'store']);
+                Route::get('pos/shifts/current', [PosShiftController::class, 'current']);
+                Route::get('pos/shifts', [PosShiftController::class, 'index']);
+                Route::post('pos/shifts/open', [PosShiftController::class, 'open']);
+                Route::post('pos/shifts/close', [PosShiftController::class, 'close']);
             });
 
             // Kitchen

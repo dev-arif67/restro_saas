@@ -30,20 +30,20 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             TenantSeeder::class,
-            // SubscriptionPlanSeeder::class,
+            SubscriptionPlanSeeder::class,
         ]);
 
         User::factory(10)->create();
         SubscriptionPlan::factory(10)->create();
-        Category::factory(10)->create();
-        Tenant::factory(5)->create();
-        Subscription::factory(5)->create();
-        RestaurantTable::factory(10)->create();
-        MenuItem::factory(50)->create();
-        Voucher::factory(20)->create();
+        // Category::factory(10)->create();
+        // Tenant::factory(5)->create();
+        // Subscription::factory(5)->create();
+        // RestaurantTable::factory(10)->create();
+        // MenuItem::factory(50)->create();
+        // Voucher::factory(20)->create();
         // Order::factory(30)->create();
         // OrderItem::factory(100)->create();
-        Settlement::factory(20)->create();
+        // Settlement::factory(20)->create();
 
 
     }
