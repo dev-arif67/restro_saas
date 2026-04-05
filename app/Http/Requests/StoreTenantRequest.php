@@ -29,6 +29,7 @@ class StoreTenantRequest extends FormRequest
             'admin_email' => 'required|email|unique:users,email',
             'admin_password' => 'required|string|min:8',
             // Subscription
+            'plan_id' => 'nullable|exists:subscription_plans,id',
             'plan_type' => 'required|in:monthly,yearly,custom',
             'custom_days' => 'nullable|integer|min:1|required_if:plan_type,custom',
             'subscription_amount' => 'required|numeric|min:0',

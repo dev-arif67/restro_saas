@@ -6,6 +6,8 @@ import StatusBadge from '../../components/ui/StatusBadge';
 import Modal from '../../components/ui/Modal';
 import toast from 'react-hot-toast';
 
+const toSubscriptionType = (slug) => (slug === 'monthly' || slug === 'yearly' ? slug : 'custom');
+
 export default function TenantsPage() {
     const queryClient = useQueryClient();
     const [showOnboard, setShowOnboard] = useState(false);
@@ -43,6 +45,7 @@ export default function TenantsPage() {
         e.preventDefault();
         const formData = Object.fromEntries(new FormData(e.target));
         const plan = plans?.find((p) => p.id === parseInt(formData.plan_id));
+        const planType = toSubscriptionType(plan?.slug);
         const d = {
             name: formData.name,
             email: formData.email,
@@ -52,7 +55,9 @@ export default function TenantsPage() {
             admin_name: formData.admin_name,
             admin_email: formData.admin_email,
             admin_password: formData.admin_password,
-            plan_type: plan?.slug || 'monthly',
+            plan_id: plan ? plan.id : null,
+            plan_type: planType,
+            custom_days: plan ? plan.duration_days : 30,
             subscription_amount: plan ? parseFloat(plan.price) : parseFloat(formData.subscription_amount || 0),
             payment_method: formData.payment_method || 'manual',
         };

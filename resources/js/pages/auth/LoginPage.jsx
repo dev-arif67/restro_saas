@@ -25,6 +25,8 @@ export default function LoginPage() {
 
             if (data.user.role === 'kitchen') {
                 navigate('/kitchen');
+            } else if (data.user.role === 'super_admin') {
+                navigate('/dashboard/admin');
             } else {
                 navigate('/dashboard');
             }
@@ -85,7 +87,7 @@ export default function LoginPage() {
                     </form>
 
                     <p className="text-center text-sm text-gray-500 mt-6">
-                       
+
                     </p>
                 </div>
             </div>

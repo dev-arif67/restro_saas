@@ -30,6 +30,8 @@ import {
     HiOutlineDocumentText,
     HiOutlineMail,
     HiOutlineTicket,
+    HiOutlineClock,
+    HiOutlineExclamation,
 } from 'react-icons/hi';
 import { HiArrowsPointingOut, HiArrowsPointingIn } from 'react-icons/hi2';
 
@@ -78,6 +80,7 @@ export default function DashboardLayout() {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
+    const [trialInfo, setTrialInfo] = useState({ isOnTrial: false, daysRemaining: 0, trialEndsAt: null });
     const [notificationsOpen, setNotificationsOpen] = useState(false);
     const profileRef = useRef(null);
     const notificationsRef = useRef(null);
@@ -98,8 +101,17 @@ export default function DashboardLayout() {
     // Refresh user + tenant data on mount so VAT settings are always current
     useEffect(() => {
         authAPI.me().then((res) => {
-            const userData = res.data?.data?.user ?? res.data?.user;
+            const data = res.data?.data ?? res.data;
+            const userData = data?.user ?? res.data?.user;
             if (userData) updateUser(userData);
+            // Store trial info from me() response
+            if (data?.is_on_trial) {
+                setTrialInfo({
+                    isOnTrial: data.is_on_trial,
+                    daysRemaining: data.trial_days_remaining ?? 0,
+                    trialEndsAt: data.trial_ends_at,
+                });
+            }
         }).catch(() => {});
     }, []);
 
@@ -319,6 +331,38 @@ export default function DashboardLayout() {
                         </div>
                     </div>
                 </header>
+
+                {/* Trial Banner — shown to restaurant admins during active trial */}
+                {user?.role === 'restaurant_admin' && trialInfo.isOnTrial && (
+                    <div className={`flex items-center justify-between gap-3 px-4 py-2.5 text-sm font-medium ${
+                        trialInfo.daysRemaining <= 3
+                            ? 'bg-red-500 text-white'
+                            : trialInfo.daysRemaining <= 7
+                                ? 'bg-amber-400 text-amber-900'
+                                : 'bg-blue-600 text-white'
+                    }`}>
+                        <div className="flex items-center gap-2">
+                            {trialInfo.daysRemaining <= 3
+                                ? <HiOutlineExclamation className="w-5 h-5 shrink-0" />
+                                : <HiOutlineClock className="w-5 h-5 shrink-0" />
+                            }
+                            <span>
+                                {trialInfo.daysRemaining <= 0
+                                    ? 'Your free trial has ended.'
+                                    : trialInfo.daysRemaining === 1
+                                        ? 'Your free trial ends today!'
+                                        : `Free trial — ${trialInfo.daysRemaining} day${trialInfo.daysRemaining !== 1 ? 's' : ''} remaining`
+                                }
+                            </span>
+                        </div>
+                        <button
+                            onClick={() => navigate('/dashboard/settings?tab=subscription')}
+                            className="shrink-0 whitespace-nowrap rounded-lg border border-white/30 bg-white/20 px-3 py-1 text-xs font-semibold hover:bg-white/30 transition-colors"
+                        >
+                            Upgrade Now
+                        </button>
+                    </div>
+                )}
 
                 {/* Page Content */}
                 <main className="flex-1 overflow-y-auto">

@@ -394,8 +394,12 @@ export default function LandingPage() {
                         <p className="text-sm font-semibold tracking-wider uppercase mb-3" style={{ color: PRIMARY_COLOR }}>Pricing</p>
                         <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Simple, Transparent Pricing</h2>
                         <p className="mt-4 text-gray-500 text-lg">No hidden fees. Pick a plan, start today, upgrade anytime.</p>
+                        {plans?.some(p => p.trial_days > 0) && (
+                            <p className="mt-2 text-sm font-medium" style={{ color: PRIMARY_COLOR }}>
+                                Free trial available — no credit card required
+                            </p>
+                        )}
                     </div>
-
                     <div className={`grid gap-8 max-w-5xl mx-auto ${plans?.length === 1 ? 'md:grid-cols-1 max-w-md' : plans?.length === 2 ? 'md:grid-cols-2 max-w-3xl' : 'md:grid-cols-3'}`}>
                         {plans?.map((plan, i) => {
                             const isMiddle = plans.length >= 3 && i === Math.floor(plans.length / 2);
@@ -419,6 +423,16 @@ export default function LandingPage() {
                                     <div className="mb-6">
                                         <span className="text-4xl font-bold text-gray-900">৳{formatPrice(plan.price)}</span>
                                         <span className="text-gray-500">{getDurationLabel(plan.duration_days)}</span>
+                                        {plan.annual_price && (
+                                            <p className="text-sm text-gray-500 mt-2">
+                                                Annual billing: ৳{formatPrice(plan.annual_price)}/year
+                                            </p>
+                                        )}
+                                        {plan.trial_days > 0 && (
+                                            <p className="text-sm font-semibold mt-2" style={{ color: PRIMARY_COLOR }}>
+                                                {plan.trial_days}-day free trial
+                                            </p>
+                                        )}
                                     </div>
                                     {features.length > 0 && (
                                         <ul className="space-y-3 mb-8">
@@ -431,11 +445,11 @@ export default function LandingPage() {
                                         </ul>
                                     )}
                                     <a
-                                        href="#contact"
+                                        href="/register"
                                         className={`block text-center py-3 rounded-xl font-semibold transition-all ${isMiddle ? 'text-white hover:opacity-90' : 'text-gray-700 border border-gray-200 hover:border-gray-300'}`}
                                         style={{ backgroundColor: isMiddle ? PRIMARY_COLOR : 'white' }}
                                     >
-                                        Get Started
+                                        {plan.trial_days > 0 ? `Start Free ${plan.trial_days}-Day Trial` : 'Get Started'}
                                     </a>
                                 </div>
                             );

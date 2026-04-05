@@ -30,11 +30,11 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             TenantSeeder::class,
-            // SubscriptionPlanSeeder::class,
+            SubscriptionPlanSeeder::class,
         ]);
 
         User::factory(10)->create();
-        SubscriptionPlan::factory(10)->create();
+        // SubscriptionPlan::factory(10)->create();
         Category::factory(10)->create();
         Tenant::factory(5)->create();
         Subscription::factory(5)->create();

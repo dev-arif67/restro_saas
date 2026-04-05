@@ -45,6 +45,8 @@ class PlanController extends BaseApiController
             'name' => 'required|string|max:100',
             'slug' => 'nullable|string|max:100|unique:subscription_plans,slug',
             'price' => 'required|numeric|min:0',
+            'annual_price' => 'nullable|numeric|min:0',
+            'trial_days' => 'nullable|integer|min:0|max:90',
             'duration_days' => 'required|integer|min:1|max:730',
             'features' => 'nullable|array',
             'features.*' => 'string|max:255',
@@ -57,6 +59,7 @@ class PlanController extends BaseApiController
         $validated['max_users'] = $validated['max_users'] ?? 5;
         $validated['is_active'] = $validated['is_active'] ?? true;
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
+        $validated['trial_days'] = $validated['trial_days'] ?? 0;
 
         $plan = SubscriptionPlan::create($validated);
 
@@ -100,6 +103,8 @@ class PlanController extends BaseApiController
             'name' => 'sometimes|string|max:100',
             'slug' => 'sometimes|string|max:100|unique:subscription_plans,slug,' . $id,
             'price' => 'sometimes|numeric|min:0',
+            'annual_price' => 'nullable|numeric|min:0',
+            'trial_days' => 'nullable|integer|min:0|max:90',
             'duration_days' => 'sometimes|integer|min:1|max:730',
             'features' => 'nullable|array',
             'features.*' => 'string|max:255',

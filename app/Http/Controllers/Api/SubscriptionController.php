@@ -11,12 +11,15 @@ use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class SubscriptionController extends BaseApiController
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Subscription::withoutGlobalScopes()->with('tenant:id,name');
+        $query = Subscription::withoutGlobalScopes()->where('status', '=', 'active')->with('tenant:id,name');
 
         if ($tenantId = $request->get('tenant_id')) {
             $query->where('tenant_id', $tenantId);
@@ -98,7 +101,7 @@ class SubscriptionController extends BaseApiController
 
     public function currentSubscription(): JsonResponse
     {
-        $tenant = auth()->user()->tenant;
+        $tenant = Auth::user()?->tenant;
 
         if (!$tenant) {
             return $this->error('No tenant found', 404);
@@ -106,18 +109,16 @@ class SubscriptionController extends BaseApiController
 
         $subscription = $tenant->activeSubscription;
 
-        if (!$subscription) {
-            return $this->success([
-                'subscription' => null,
-                'expired' => true,
-                'message' => 'No active subscription',
-            ]);
-        }
-
         return $this->success([
             'subscription' => $subscription,
-            'expired' => false,
-            'days_remaining' => $subscription->daysRemaining(),
+            'expired' => !$tenant->hasAccessRights(),
+            'is_on_trial' => $tenant->isOnTrial(),
+            'trial_days_remaining' => $tenant->trialDaysRemaining(),
+            'trial_ends_at' => $tenant->trial_ends_at,
+            'days_remaining' => $subscription?->daysRemaining() ?? 0,
+            'message' => !$subscription
+                ? ($tenant->isOnTrial() ? 'Free trial active' : 'No active subscription')
+                : null,
         ]);
     }
 
@@ -132,7 +133,7 @@ class SubscriptionController extends BaseApiController
             'payment_method' => 'nullable|in:sslcommerz,manual',
         ]);
 
-        $user = auth()->user();
+        $user = Auth::user();
         $tenant = $user->tenant;
 
         if (!$tenant) {
@@ -148,7 +149,7 @@ class SubscriptionController extends BaseApiController
         $renewalData = [
             'tenant_id' => $tenant->id,
             'plan_id' => $plan->id,
-            'plan_type' => $plan->slug,
+            'plan_type' => $plan->subscriptionType(),
             'amount' => $plan->price,
             'duration_days' => $plan->duration_days,
             'tran_id' => $tranId,
@@ -168,7 +169,7 @@ class SubscriptionController extends BaseApiController
             $subscription = Subscription::withoutGlobalScopes()->create([
                 'tenant_id' => $tenant->id,
                 'plan_id' => $plan->id,
-                'plan_type' => $plan->slug,
+                'plan_type' => $plan->subscriptionType(),
                 'amount' => $plan->price,
                 'payment_method' => 'manual',
                 'transaction_id' => $tranId,
@@ -345,66 +346,130 @@ class SubscriptionController extends BaseApiController
             return $this->notFound('Tenant not found');
         }
 
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'plan_id' => 'required_without:plan_type|exists:subscription_plans,id',
             'plan_type' => 'required_without:plan_id|in:monthly,yearly,custom',
-            'custom_days' => 'required_if:plan_type,custom|integer|min:1',
-            'custom_amount' => 'required_if:plan_type,custom|numeric|min:0',
+            'custom_days' => 'nullable|integer|min:1',
+            'custom_amount' => 'nullable|numeric|min:0',
             'payment_method' => 'nullable|string|max:50',
             'payment_ref' => 'nullable|string|max:255',
             'notes' => 'nullable|string|max:500',
         ]);
 
-        // Expire existing active subscriptions
-        Subscription::withoutGlobalScopes()
+        $validator->sometimes('custom_days', 'required|integer|min:1', function ($input) {
+            return empty($input->plan_id) && ($input->plan_type ?? null) === 'custom';
+        });
+
+        $validator->sometimes('custom_amount', 'required|numeric|min:0', function ($input) {
+            return empty($input->plan_id) && ($input->plan_type ?? null) === 'custom';
+        });
+
+        $validated = $validator->validate();
+
+        $currentSubscription = Subscription::withoutGlobalScopes()
             ->where('tenant_id', $tenantId)
             ->where('status', 'active')
-            ->update(['status' => 'expired']);
+            ->latest('expires_at')
+            ->first();
 
-        // If using a plan, get the plan details
-        if ($request->plan_id) {
-            $plan = SubscriptionPlan::findOrFail($request->plan_id);
+        if (!empty($validated['plan_id'])) {
+            $plan = SubscriptionPlan::findOrFail($validated['plan_id']);
             $amount = $plan->price;
             $duration = $plan->duration_days;
-            $planType = $plan->slug;
+            $planType = $plan->subscriptionType();
         } else {
             $plan = null;
-            $planType = $request->plan_type;
+            $planType = $validated['plan_type'];
 
             $amount = match ($planType) {
                 'monthly' => config('saas.plans.monthly.price', 999),
                 'yearly' => config('saas.plans.yearly.price', 9999),
-                'custom' => $request->custom_amount,
+                'custom' => $validated['custom_amount'],
             };
 
             $duration = match ($planType) {
                 'monthly' => config('saas.plans.monthly.duration_days', 30),
                 'yearly' => config('saas.plans.yearly.duration_days', 365),
-                'custom' => $request->custom_days,
+                'custom' => $validated['custom_days'],
             };
         }
 
-        $subscription = Subscription::withoutGlobalScopes()->create([
-            'tenant_id' => $tenantId,
-            'plan_id' => $plan?->id,
-            'plan_type' => $planType,
-            'amount' => $amount,
-            'payment_method' => $request->payment_method ?? 'manual',
-            'payment_ref' => $request->payment_ref,
-            'starts_at' => now(),
-            'expires_at' => now()->addDays($duration),
-            'status' => 'active',
-            'notes' => $request->notes ?? 'Manual renewal by super admin',
-        ]);
+        $renewalBaseDate = $currentSubscription?->expires_at?->copy() ?? now();
 
-        // Ensure tenant is active
-        $tenant->update(['is_active' => true]);
+        if ($renewalBaseDate->isPast()) {
+            $renewalBaseDate = now();
+        }
 
-        AuditLogger::logCreated($subscription);
+        $startsAt = now();
+        $expiresAt = $renewalBaseDate->copy()->addDays($duration);
+
+        $subscription = DB::transaction(function () use (
+            $tenant,
+            $tenantId,
+            $validated,
+            $plan,
+            $planType,
+            $amount,
+            $duration,
+            $startsAt,
+            $expiresAt,
+            $currentSubscription,
+            $renewalBaseDate
+        ) {
+            Subscription::withoutGlobalScopes()
+                ->where('tenant_id', $tenantId)
+                ->where('status', 'active')
+                ->update(['status' => 'expired']);
+
+            $subscription = Subscription::withoutGlobalScopes()->create([
+                'tenant_id' => $tenantId,
+                'plan_id' => $plan?->id,
+                'plan_type' => $planType,
+                'amount' => $amount,
+                'payment_method' => $validated['payment_method'] ?? 'manual',
+                'payment_ref' => $validated['payment_ref'] ?? null,
+                'starts_at' => $startsAt,
+                'expires_at' => $expiresAt,
+                'status' => 'active',
+                'notes' => $validated['notes'] ?? 'Manual renewal by super admin',
+            ]);
+
+            $tenant->update(['is_active' => true]);
+
+            AuditLogger::log('subscription_renewed', $subscription, $currentSubscription ? [
+                'subscription_id' => $currentSubscription->id,
+                'tenant_id' => $currentSubscription->tenant_id,
+                'plan_id' => $currentSubscription->plan_id,
+                'plan_type' => $currentSubscription->plan_type,
+                'amount' => $currentSubscription->amount,
+                'payment_method' => $currentSubscription->payment_method,
+                'payment_ref' => $currentSubscription->payment_ref,
+                'transaction_id' => $currentSubscription->transaction_id,
+                'starts_at' => $currentSubscription->starts_at?->toDateString(),
+                'expires_at' => $currentSubscription->expires_at?->toDateString(),
+                'status' => $currentSubscription->status,
+            ] : null, [
+                'tenant_id' => $tenantId,
+                'plan_id' => $plan?->id,
+                'plan_type' => $planType,
+                'amount' => $amount,
+                'payment_method' => $validated['payment_method'] ?? 'manual',
+                'payment_ref' => $validated['payment_ref'] ?? null,
+                'starts_at' => $startsAt->toDateString(),
+                'expires_at' => $expiresAt->toDateString(),
+                'renewal_base_date' => $renewalBaseDate->toDateString(),
+                'extension_days' => $duration,
+                'notes' => $validated['notes'] ?? 'Manual renewal by super admin',
+            ]);
+
+            return $subscription;
+        });
 
         return $this->created([
             'subscription' => $subscription->load('tenant:id,name'),
             'plan' => $plan,
+            'renewal_base_date' => $renewalBaseDate->toDateString(),
+            'expires_at' => $expiresAt->toDateString(),
         ], 'Subscription renewed successfully');
     }
 }

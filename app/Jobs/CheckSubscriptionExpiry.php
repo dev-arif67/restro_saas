@@ -53,6 +53,20 @@ class CheckSubscriptionExpiry implements ShouldQueue
         }
 
         Log::info("Processed {$expired->count()} expired subscriptions.");
+
+        // Deactivate tenants whose trial has expired with no active paid subscription
+        $expiredTrials = Tenant::where('is_active', true)
+            ->whereNotNull('trial_ends_at')
+            ->where('trial_ends_at', '<', now())
+            ->whereDoesntHave('subscriptions', fn ($q) => $q->where('status', 'active')->where('expires_at', '>=', today()))
+            ->get();
+
+        foreach ($expiredTrials as $tenant) {
+            $tenant->update(['is_active' => false]);
+            Log::info("Tenant {$tenant->id} deactivated — free trial expired.");
+        }
+
+        Log::info("Processed {$expiredTrials->count()} expired trials.");
     }
 
     /**

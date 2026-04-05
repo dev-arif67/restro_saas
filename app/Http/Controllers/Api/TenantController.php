@@ -52,6 +52,7 @@ class TenantController extends BaseApiController
                 'commission_rate' => $request->commission_rate ?? 0,
                 'tax_rate' => $request->tax_rate ?? 0,
                 'max_users' => $request->max_users ?? 5,
+                'is_active' => true,
             ]);
 
             // Create admin user for tenant
@@ -65,16 +66,28 @@ class TenantController extends BaseApiController
             ]);
 
             // Create subscription
-            $planDays = match ($request->plan_type) {
-                'monthly' => config('saas.plans.monthly.duration_days', 30),
-                'yearly' => config('saas.plans.yearly.duration_days', 365),
-                'custom' => $request->custom_days ?? 30,
-                default => 30,
-            };
+            $planModel = $request->plan_id
+                ? \App\Models\SubscriptionPlan::find($request->plan_id)
+                : null;
+
+            $planDays = $planModel
+                ? $planModel->duration_days
+                : match ($request->plan_type) {
+                    'monthly' => config('saas.plans.monthly.duration_days', 30),
+                    'yearly' => config('saas.plans.yearly.duration_days', 365),
+                    'custom' => $request->custom_days ?? 30,
+                    default => 30,
+                };
+
+            // Use plan max_users if a plan was selected
+            if ($planModel && !$request->filled('max_users')) {
+                $tenant->update(['max_users' => $planModel->max_users]);
+            }
 
             Subscription::withoutGlobalScopes()->create([
                 'tenant_id' => $tenant->id,
-                'plan_type' => $request->plan_type,
+                'plan_id' => $planModel?->id,
+                'plan_type' => $planModel ? $planModel->subscriptionType() : $request->plan_type,
                 'amount' => $request->subscription_amount,
                 'payment_method' => $request->payment_method ?? 'manual',
                 'payment_ref' => $request->payment_ref,

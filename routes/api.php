@@ -46,20 +46,7 @@ use Illuminate\Support\Facades\Route;
 
 // Unversioned Routes (must remain stable across versions)
 // Public Health Check (for load balancers / uptime monitors)
-Route::get('health', function () {
-    try {
-        \Illuminate\Support\Facades\DB::connection()->getPdo();
-        return response()->json([
-            'status' => 'healthy',
-            'timestamp' => now()->toIso8601String(),
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'status' => 'unhealthy',
-            'timestamp' => now()->toIso8601String(),
-        ], 503);
-    }
-});
+Route::get('health', [SystemController::class, 'publicHealth']);
 
 // SSLCommerz Payment Routes (public, callbacks from gateway — must be stable URLs)
 Route::prefix('payment/sslcommerz')->group(function () {
@@ -384,4 +371,4 @@ $v1Routes = function () {
 
 // Register v1 routes at root /api/ (backward compatible) and /api/v1/ (versioned)
 $v1Routes();
-Route::prefix('v1')->group($v1Routes);
+Route::prefix('v1')->as('v1.')->group($v1Routes);

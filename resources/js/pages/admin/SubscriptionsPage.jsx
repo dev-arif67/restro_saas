@@ -6,6 +6,8 @@ import StatusBadge from '../../components/ui/StatusBadge';
 import Modal from '../../components/ui/Modal';
 import toast from 'react-hot-toast';
 
+const toSubscriptionType = (slug) => (slug === 'monthly' || slug === 'yearly' ? slug : 'custom');
+
 export default function SubscriptionsPage() {
     const queryClient = useQueryClient();
     const [showForm, setShowForm] = useState(false);
@@ -57,7 +59,7 @@ export default function SubscriptionsPage() {
         const plan = plans?.find((p) => p.id === parseInt(d.plan_id));
         createMutation.mutate({
             tenant_id: selectedTenant,
-            plan_type: plan?.slug || d.plan_id,
+            plan_type: toSubscriptionType(plan?.slug),
             amount: plan ? parseFloat(plan.price) : parseFloat(d.amount),
             starts_at: d.starts_at,
             expires_at: d.starts_at ? new Date(new Date(d.starts_at).getTime() + (plan?.duration_days || 30) * 86400000).toISOString().split('T')[0] : undefined,
@@ -72,7 +74,7 @@ export default function SubscriptionsPage() {
             tenantId: renewTenant.tenant_id || renewTenant.id,
             data: {
                 plan_id: plan?.id || null,
-                plan_type: plan?.slug || 'monthly',
+                plan_type: toSubscriptionType(plan?.slug),
                 payment_method: d.payment_method || 'manual',
                 payment_ref: d.payment_ref || null,
                 notes: d.notes || null,

@@ -81,6 +81,9 @@ class AuthController extends BaseApiController
         return $this->success([
             'user' => $user,
             'subscription' => $user->tenant?->activeSubscription,
+            'is_on_trial' => $user->tenant?->isOnTrial() ?? false,
+            'trial_days_remaining' => $user->tenant?->trialDaysRemaining() ?? 0,
+            'trial_ends_at' => $user->tenant?->trial_ends_at,
         ]);
     }
 

@@ -31,8 +31,11 @@ api.interceptors.response.use(
         }
 
         if (error.response?.status === 402) {
-            // Subscription expired
-            window.location.href = '/dashboard/settings?subscription=expired';
+            // Subscription or trial expired
+            const isTrialExpired = error.response?.data?.trial_expired === true;
+            window.location.href = isTrialExpired
+                ? '/dashboard/settings?trial=expired'
+                : '/dashboard/settings?subscription=expired';
         }
 
         return Promise.reject(error);

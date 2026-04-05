@@ -58,7 +58,8 @@ class OnboardingController extends BaseApiController
                 'commission_rate' => config('saas.default_commission_rate', 5.00),
                 'tax_rate' => 0,
                 'max_users' => 5,
-                'is_active' => false, // Inactive until subscription is paid
+                'is_active' => true, // Active immediately on trial
+                'trial_ends_at' => now()->addDays(config('saas.trial.default_days', 14)),
             ]);
 
             // Link the user to the new tenant
@@ -81,8 +82,10 @@ class OnboardingController extends BaseApiController
                 'tenant' => $tenant,
                 'user' => $user->fresh()->load('tenant'),
                 'next_step' => 'subscribe',
-                'message' => 'Restaurant created. Please subscribe to activate your account.',
-            ], 'Restaurant setup completed. Next: choose a subscription plan.');
+                'trial_ends_at' => $tenant->trial_ends_at,
+                'trial_days_remaining' => $tenant->trialDaysRemaining(),
+                'message' => 'Restaurant created. Free trial active for ' . config('saas.trial.default_days', 14) . ' days.',
+            ], 'Restaurant setup completed. Your free trial is now active.');
         });
     }
 
@@ -127,7 +130,7 @@ class OnboardingController extends BaseApiController
         $subscriptionData = [
             'tenant_id' => $tenant->id,
             'plan_id' => $plan->id,
-            'plan_type' => $plan->slug,
+            'plan_type' => $plan->subscriptionType(),
             'amount' => $plan->price,
             'duration_days' => $plan->duration_days,
             'tran_id' => $tranId,
@@ -317,7 +320,7 @@ class OnboardingController extends BaseApiController
         $subscription = $this->activateSubscription([
             'tenant_id' => $tenant->id,
             'plan_id' => $plan->id,
-            'plan_type' => $plan->slug,
+            'plan_type' => $plan->subscriptionType(),
             'amount' => $plan->price,
             'duration_days' => $plan->duration_days,
         ], $method, $tranId);
@@ -349,6 +352,9 @@ class OnboardingController extends BaseApiController
             $status['restaurant'] = $tenant;
             $status['has_subscription'] = $tenant?->hasActiveSubscription() ?? false;
             $status['is_active'] = $tenant?->is_active ?? false;
+            $status['is_on_trial'] = $tenant?->isOnTrial() ?? false;
+            $status['trial_days_remaining'] = $tenant?->trialDaysRemaining() ?? 0;
+            $status['trial_ends_at'] = $tenant?->trial_ends_at;
 
             if ($status['has_subscription']) {
                 $status['current_step'] = 'complete';

@@ -14,6 +14,8 @@ class SubscriptionPlan extends Model
         'name',
         'slug',
         'price',
+        'annual_price',
+        'trial_days',
         'duration_days',
         'features',
         'max_users',
@@ -23,6 +25,8 @@ class SubscriptionPlan extends Model
 
     protected $casts = [
         'price' => 'decimal:2',
+        'annual_price' => 'decimal:2',
+        'trial_days' => 'integer',
         'duration_days' => 'integer',
         'features' => 'array',
         'max_users' => 'integer',
@@ -68,5 +72,15 @@ class SubscriptionPlan extends Model
     public function canDelete(): bool
     {
         return $this->subscriptions()->active()->count() === 0;
+    }
+
+    /**
+     * Map plan slug to legacy subscription enum values.
+     */
+    public function subscriptionType(): string
+    {
+        return in_array($this->slug, ['monthly', 'yearly'], true)
+            ? $this->slug
+            : 'custom';
     }
 }

@@ -349,7 +349,7 @@ export default function POSPage() {
                                                     : 'bg-green-50 text-green-700 border-green-200 hover:border-green-400'
                                             }`}
                                         >
-                                            T{t.table_number}
+                                            {t.table_number}
                                             {occ && !sel && <span className="block text-[9px] leading-none text-orange-400">busy</span>}
                                         </button>
                                     );

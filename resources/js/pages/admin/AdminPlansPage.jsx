@@ -14,6 +14,8 @@ export default function AdminPlansPage() {
         name: '',
         slug: '',
         price: '',
+        annual_price: '',
+        trial_days: 14,
         duration_days: 30,
         features: [],
         max_users: 5,
@@ -63,6 +65,8 @@ export default function AdminPlansPage() {
             name: '',
             slug: '',
             price: '',
+            annual_price: '',
+            trial_days: 14,
             duration_days: 30,
             features: [],
             max_users: 5,
@@ -78,6 +82,8 @@ export default function AdminPlansPage() {
             name: plan.name,
             slug: plan.slug,
             price: plan.price,
+            annual_price: plan.annual_price || '',
+            trial_days: plan.trial_days ?? 0,
             duration_days: plan.duration_days,
             features: plan.features || [],
             max_users: plan.max_users,
@@ -92,6 +98,8 @@ export default function AdminPlansPage() {
         const data = {
             ...formData,
             price: parseFloat(formData.price),
+            annual_price: formData.annual_price === '' ? null : parseFloat(formData.annual_price),
+            trial_days: parseInt(formData.trial_days) || 0,
             duration_days: parseInt(formData.duration_days),
             max_users: parseInt(formData.max_users),
             sort_order: parseInt(formData.sort_order),
@@ -174,6 +182,16 @@ export default function AdminPlansPage() {
                             <p className="text-sm text-gray-500">
                                 for {plan.duration_days} days
                             </p>
+                            {plan.annual_price && (
+                                <p className="text-sm text-blue-600 mt-1">
+                                    Annual: {formatCurrency(plan.annual_price)}
+                                </p>
+                            )}
+                            {plan.trial_days > 0 && (
+                                <p className="text-sm text-green-600 mt-1 font-medium">
+                                    {plan.trial_days}-day free trial
+                                </p>
+                            )}
                         </div>
 
                         {/* Features */}
@@ -271,6 +289,21 @@ export default function AdminPlansPage() {
                             />
                         </div>
                         <div>
+                            <label className="label">Annual Price (BDT)</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                className="input"
+                                value={formData.annual_price}
+                                onChange={(e) => setFormData({ ...formData, annual_price: e.target.value })}
+                                placeholder="Optional"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
                             <label className="label">Duration (Days)</label>
                             <input
                                 type="number"
@@ -281,9 +314,18 @@ export default function AdminPlansPage() {
                                 required
                             />
                         </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="label">Free Trial Days</label>
+                            <input
+                                type="number"
+                                min="0"
+                                max="90"
+                                className="input"
+                                value={formData.trial_days}
+                                onChange={(e) => setFormData({ ...formData, trial_days: e.target.value })}
+                                placeholder="0 = no trial"
+                            />
+                        </div>
                         <div>
                             <label className="label">Max Users</label>
                             <input

@@ -23,10 +23,14 @@ class EnsureActiveSubscription
             return response()->json(['message' => 'No tenant found.'], 403);
         }
 
-        if ($tenant->isSubscriptionExpired()) {
+        if (!$tenant->hasAccessRights()) {
+            $trialExpired = $tenant->trialExpired();
             return response()->json([
-                'message' => 'Subscription expired. Please renew to continue.',
+                'message' => $trialExpired
+                    ? 'Your free trial has expired. Please subscribe to continue.'
+                    : 'Subscription expired. Please renew to continue.',
                 'subscription_expired' => true,
+                'trial_expired' => $trialExpired,
             ], 402);
         }
 

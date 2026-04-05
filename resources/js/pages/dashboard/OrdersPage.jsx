@@ -253,7 +253,7 @@ export default function OrdersPage() {
                                         <option key={s} value={s}>{s}</option>
                                     ))}
                                 </select>
-                                <button onClick={() => cancelMutation.mutate(viewOrder.id)} className="btn-danger">Cancel</button>
+                                {/* <button onClick={() => cancelMutation.mutate(viewOrder.id)} className="btn-danger">Cancel</button> */}
                             </div>
                         )}
                     </div>

@@ -50,6 +50,22 @@ const AdminAuditLogPage = lazy(() => import('./pages/admin/AdminAuditLogPage'));
 const AdminEnquiriesPage = lazy(() => import('./pages/admin/AdminEnquiriesPage'));
 const AdminFinancialPage = lazy(() => import('./pages/admin/AdminFinancialPage'));
 
+function getDefaultDashboardPath(role) {
+    if (role === 'super_admin') return '/dashboard/admin';
+    if (role === 'kitchen') return '/kitchen';
+    return '/dashboard';
+}
+
+function DashboardIndexRoute() {
+    const { user } = useAuthStore();
+
+    if (user?.role === 'super_admin') {
+        return <Navigate to="/dashboard/admin" replace />;
+    }
+
+    return <DashboardPage />;
+}
+
 function ProtectedRoute({ children, roles }) {
     const { user, token } = useAuthStore();
 
@@ -58,7 +74,7 @@ function ProtectedRoute({ children, roles }) {
     }
 
     if (roles && !roles.includes(user.role)) {
-        return <Navigate to="/dashboard" replace />;
+        return <Navigate to={getDefaultDashboardPath(user.role)} replace />;
     }
 
     return children;
@@ -81,7 +97,7 @@ export default function App() {
                         </ProtectedRoute>
                     }
                 >
-                    <Route index element={<DashboardPage />} />
+                    <Route index element={<DashboardIndexRoute />} />
                     <Route path="menu" element={<MenuItemsPage />} />
                     <Route path="categories" element={<CategoriesPage />} />
                     <Route path="tables" element={<TablesPage />} />
