@@ -4,6 +4,7 @@ import { adminAPI } from '../../services/api';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import StatusBadge from '../../components/ui/StatusBadge';
 import Modal from '../../components/ui/Modal';
+import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 const toSubscriptionType = (slug) => (slug === 'monthly' || slug === 'yearly' ? slug : 'custom');
@@ -85,7 +86,15 @@ export default function TenantsPage() {
                     <tbody>
                         {data?.map((t) => (
                             <tr key={t.id} className="border-b last:border-0">
-                                <td className="py-3 font-medium">{t.name}</td>
+                                <td className="py-3 font-medium">
+                                    <Link
+                                        to={`/dashboard/admin/tenants/${t.id}`}
+                                        className="font-medium text-gray-900 hover:text-blue-600"
+                                    >
+                                        {t.name}
+                                    </Link>
+
+                                    </td>
                                 <td className="py-3 font-mono text-sm">{t.slug}</td>
                                 <td className="py-3">{t.email}</td>
                                 <td className="py-3 capitalize">{t.payment_mode}</td>

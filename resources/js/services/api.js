@@ -23,7 +23,13 @@ api.interceptors.request.use(
 
 // Response interceptor - handle auth errors
 api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        const warning = response.headers?.['x-subscription-warning'];
+        if (warning === 'grace_period') {
+            sessionStorage.setItem('subscription_warning', warning);
+        }
+        return response;
+    },
     (error) => {
         if (error.response?.status === 401) {
             useAuthStore.getState().logout();
@@ -113,8 +119,12 @@ export const orderAPI = {
     updateStatus: (id, status) => api.patch(`/orders/${id}/status`, { status }),
     cancel: (id) => api.post(`/orders/${id}/cancel`),
     markPaid: (id, data = {}) => api.post(`/orders/${id}/mark-paid`, data),
-    track: (orderNumber) => api.get(`/customer/order/track/${orderNumber}`),
-    invoice: (orderNumber) => api.get(`/customer/order/${orderNumber}/invoice`),
+    track: (orderNumber, accessToken) => api.get(`/customer/order/track/${orderNumber}`, {
+        params: accessToken ? { access_token: accessToken } : undefined,
+    }),
+    invoice: (orderNumber, accessToken) => api.get(`/customer/order/${orderNumber}/invoice`, {
+        params: accessToken ? { access_token: accessToken } : undefined,
+    }),
 };
 
 // Kitchen
@@ -155,7 +165,17 @@ export const userAPI = {
 // Subscription
 export const subscriptionAPI = {
     current: () => api.get('/subscription/current'),
+    plans: () => api.get('/subscription/plans'),
+    initiate: (data) => api.post('/subscription/initiate', data),
+    verify: (data) => api.post('/subscription/verify', data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    }),
     pay: (data) => api.post('/subscription/pay', data),
+};
+
+// Module Access (tenant-facing)
+export const moduleAPI = {
+    myAccess: () => api.get('/modules/my-access'),
 };
 
 // Branding (restaurant admin)
@@ -220,7 +240,20 @@ export const adminAPI = {
         create: (data) => api.post('/admin/plans', data),
         show: (id) => api.get(`/admin/plans/${id}`),
         update: (id, data) => api.put(`/admin/plans/${id}`, data),
+        toggle: (id) => api.patch(`/admin/plans/${id}/toggle`),
         delete: (id) => api.delete(`/admin/plans/${id}`),
+        modules: (planId) => api.get(`/admin/plans/${planId}/modules`),
+        syncModules: (planId, moduleKeys) => api.post(`/admin/plans/${planId}/modules/sync`, { module_keys: moduleKeys }),
+    },
+    modules: {
+        list: () => api.get('/admin/modules'),
+        toggle: (key) => api.patch(`/admin/modules/${key}/toggle`),
+    },
+    tenantModules: {
+        matrix: (tenantId) => api.get(`/admin/tenants/${tenantId}/modules`),
+        grant: (tenantId, data) => api.post(`/admin/tenants/${tenantId}/modules/grant`, data),
+        revoke: (tenantId, data) => api.post(`/admin/tenants/${tenantId}/modules/revoke`, data),
+        removeOverride: (tenantId, moduleKey) => api.delete(`/admin/tenants/${tenantId}/modules/${moduleKey}`),
     },
     settlements: {
         list: (params) => api.get('/admin/settlements', { params }),
@@ -256,6 +289,7 @@ export const adminAPI = {
         queueStats: () => api.get('/admin/system/queue-stats'),
         retryFailedJobs: () => api.post('/admin/system/retry-failed-jobs'),
         clearCache: (type) => api.post('/admin/system/clear-cache', { type }),
+        storageLink: () => api.post('/admin/system/storage-link'),
         logs: (lines = 100) => api.get('/admin/system/logs', { params: { lines } }),
     },
     auditLogs: {

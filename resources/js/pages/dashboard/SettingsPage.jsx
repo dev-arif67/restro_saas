@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { subscriptionAPI, brandingAPI } from '../../services/api';
+import { subscriptionAPI, brandingAPI, plansAPI } from '../../services/api';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { HiOutlinePhotograph, HiOutlineTrash, HiOutlineUpload } from 'react-icons/hi';
+import SubscriptionStatusCard from '../../components/SubscriptionStatusCard';
 
 const STORAGE_URL = '/storage/';
 
@@ -216,51 +217,82 @@ function BrandingTab() {
 }
 
 function SubscriptionTab() {
+    const queryClient = useQueryClient();
+    const [selectedPlanId, setSelectedPlanId] = useState('');
+
     const { data, isLoading } = useQuery({
         queryKey: ['subscription-current'],
         queryFn: () => subscriptionAPI.current().then((r) => r.data.data),
     });
 
+    const { data: plansData } = useQuery({
+        queryKey: ['public-plans-for-renewal'],
+        queryFn: () => plansAPI.list().then((r) => r.data.data || r.data),
+    });
+
+    const plans = Array.isArray(plansData) ? plansData : [];
+
+    useEffect(() => {
+        if (!selectedPlanId && plans.length > 0) {
+            setSelectedPlanId(String(plans[0].id));
+        }
+    }, [plans, selectedPlanId]);
+
+    const renewMutation = useMutation({
+        mutationFn: () => subscriptionAPI.pay({ plan_id: Number(selectedPlanId) }),
+        onSuccess: (res) => {
+            const payload = res.data?.data || {};
+            if (payload.payment_url) {
+                window.location.href = payload.payment_url;
+                return;
+            }
+
+            queryClient.invalidateQueries(['subscription-current']);
+            toast.success('Subscription renewed successfully');
+        },
+        onError: (err) => {
+            toast.error(err.response?.data?.message || 'Failed to start renewal');
+        },
+    });
+
     if (isLoading) return <LoadingSpinner />;
 
+    const needsRenewal = !data?.subscription || data?.expired;
+
     return (
-        <div className="card">
-            <h3 className="text-lg font-semibold mb-4">Subscription</h3>
-            {data?.subscription ? (
-                <div className="space-y-3">
-                    <div className="flex justify-between">
-                        <span className="text-gray-500">Plan</span>
-                        <span className="font-medium capitalize">{data.subscription.plan_type}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-gray-500">Status</span>
-                        <span className={`font-medium ${data.expired ? 'text-red-600' : 'text-green-600'}`}>
-                            {data.expired ? 'Expired' : 'Active'}
-                        </span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-gray-500">Expires</span>
-                        <span>{new Date(data.subscription.expires_at).toLocaleDateString()}</span>
-                    </div>
-                    {data.days_remaining !== undefined && (
-                        <div className="flex justify-between">
-                            <span className="text-gray-500">Days Remaining</span>
-                            <span className={`font-bold ${data.days_remaining < 7 ? 'text-red-600' : ''}`}>
-                                {data.days_remaining} days
-                            </span>
-                        </div>
-                    )}
-                    <div className="flex justify-between">
-                        <span className="text-gray-500">Amount</span>
-                        <span className="font-medium">৳{data.subscription.amount}</span>
-                    </div>
+        <div className="space-y-4">
+            <SubscriptionStatusCard data={data} />
+
+            <div className="card">
+                <h3 className="text-lg font-semibold mb-4">Quick Renewal</h3>
+                <div className="flex flex-col sm:flex-row gap-2">
+                    <select
+                        className="input"
+                        value={selectedPlanId}
+                        onChange={(e) => setSelectedPlanId(e.target.value)}
+                    >
+                        {plans.map((plan) => (
+                            <option key={plan.id} value={plan.id}>
+                                {plan.name} - ৳{plan.price}
+                            </option>
+                        ))}
+                    </select>
+                    <button
+                        type="button"
+                        disabled={!selectedPlanId || renewMutation.isPending}
+                        onClick={() => renewMutation.mutate()}
+                        className="btn-primary whitespace-nowrap"
+                    >
+                        {renewMutation.isPending ? 'Starting...' : 'Renew Now'}
+                    </button>
                 </div>
-            ) : (
-                <div className="text-center py-6">
-                    <p className="text-red-600 font-medium">No active subscription</p>
-                    <p className="text-gray-500 text-sm mt-1">Contact support to renew</p>
-                </div>
-            )}
+
+                {needsRenewal && data?.is_on_trial && (
+                    <p className="text-xs text-amber-600 mt-3">
+                        Trial ends in {data.trial_days_remaining ?? 0} day(s).
+                    </p>
+                )}
+            </div>
         </div>
     );
 }

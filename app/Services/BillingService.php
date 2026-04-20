@@ -8,6 +8,7 @@ use App\Models\RestaurantTable;
 use App\Models\Tenant;
 use App\Models\Voucher;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class BillingService
 {
@@ -119,6 +120,7 @@ class BillingService
                 'table_id'        => $tableId,
                 'voucher_id'      => $voucherId,
                 'order_number'    => Order::generateOrderNumber($tenant->id),
+                'public_access_token' => Str::random(40),
                 'invoice_number'  => $invoiceNumber,
                 'customer_name'   => $data['customer_name'] ?? null,
                 'customer_phone'  => $data['customer_phone'] ?? null,

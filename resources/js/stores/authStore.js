@@ -23,6 +23,7 @@ export const useAuthStore = create(
             },
 
             logout: () => {
+                localStorage.removeItem('module-store');
                 set({
                     user: null,
                     token: null,

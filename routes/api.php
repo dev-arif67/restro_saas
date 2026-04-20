@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\KitchenController;
 use App\Http\Controllers\Api\MenuDescriptionController;
+use App\Http\Controllers\Api\ModuleController;
 use App\Http\Controllers\Api\SentimentController;
 use App\Http\Controllers\Api\MenuItemController;
 use App\Http\Controllers\Api\OnboardingController;
@@ -30,6 +31,7 @@ use App\Http\Controllers\Api\SubscriptionController;
 use App\Http\Controllers\Api\SystemController;
 use App\Http\Controllers\Api\TableController;
 use App\Http\Controllers\Api\TenantController;
+use App\Http\Controllers\Api\TenantModuleController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\VatReportController;
 use App\Http\Controllers\Api\VoucherController;
@@ -51,10 +53,15 @@ Route::get('health', [SystemController::class, 'publicHealth']);
 // SSLCommerz Payment Routes (public, callbacks from gateway — must be stable URLs)
 Route::prefix('payment/sslcommerz')->group(function () {
     Route::post('initiate', [PaymentController::class, 'initiate']);
+    Route::post('callback', [PaymentController::class, 'subscriptionCallback']);
     Route::post('success', [PaymentController::class, 'handleSuccess']);
     Route::post('fail', [PaymentController::class, 'handleFail']);
     Route::post('cancel', [PaymentController::class, 'handleCancel']);
     Route::post('ipn', [PaymentController::class, 'ipn']);
+});
+
+Route::prefix('payment/bkash')->group(function () {
+    Route::post('callback', [PaymentController::class, 'bkashSubscriptionCallback']);
 });
 
 // Onboarding Payment Callbacks (public, from SSLCommerz gateway redirects)
@@ -122,10 +129,12 @@ $v1Routes = function () {
         Route::post('voucher/validate', [VoucherController::class, 'validate']);
 
         // Track order
-        Route::get('order/track/{orderNumber}', [OrderController::class, 'trackOrder']);
+        Route::get('order/track/{orderNumber}', [OrderController::class, 'trackOrder'])
+            ->middleware('throttle:30,1');
 
         // Invoice (public)
-        Route::get('order/{orderNumber}/invoice', [OrderController::class, 'invoice']);
+        Route::get('order/{orderNumber}/invoice', [OrderController::class, 'invoice'])
+            ->middleware('throttle:30,1');
     });
 
     /*
@@ -159,6 +168,19 @@ $v1Routes = function () {
             Route::post('subscribe', [OnboardingController::class, 'initiateSubscription']);
         });
 
+        // Subscription endpoints must be reachable even when subscription is expired
+        Route::middleware('tenant')->prefix('subscription')->group(function () {
+            Route::get('current', [SubscriptionController::class, 'currentSubscription']);
+            Route::get('plans', [SubscriptionController::class, 'plans']);
+            Route::post('initiate', [SubscriptionController::class, 'initiatePayment']);
+            Route::post('verify', [SubscriptionController::class, 'verify']);
+            Route::post('pay', [SubscriptionController::class, 'pay']);
+            Route::post('callback', [SubscriptionController::class, 'paymentCallback']);
+        });
+
+        // Module access (tenant-facing — get my accessible modules)
+        Route::middleware(['tenant', 'subscription'])->get('modules/my-access', [TenantModuleController::class, 'myAccess']);
+
         /*
         |------------------------------------------------------------------
         | Tenant-scoped Routes (requires active tenant + subscription)
@@ -181,7 +203,7 @@ $v1Routes = function () {
             Route::get('tables/parcel-qr', [TableController::class, 'generateParcelQr']);
 
             // Vouchers
-            Route::apiResource('vouchers', VoucherController::class);
+            Route::middleware('module:voucher_system')->apiResource('vouchers', VoucherController::class);
 
             // Orders (restaurant-side management)
             Route::apiResource('orders', OrderController::class)->only(['index', 'show']);
@@ -190,12 +212,12 @@ $v1Routes = function () {
             Route::post('orders/{id}/mark-paid', [OrderController::class, 'markPaid']);
 
             // POS Terminal (staff + admin order creation)
-            Route::middleware('role:restaurant_admin,staff')->group(function () {
+            Route::middleware(['role:restaurant_admin,staff', 'module:pos'])->group(function () {
                 Route::post('pos/orders', [PosOrderController::class, 'store']);
             });
 
             // Kitchen
-            Route::prefix('kitchen')->group(function () {
+            Route::middleware('module:kitchen_display')->prefix('kitchen')->group(function () {
                 Route::get('orders', [KitchenController::class, 'activeOrders']);
                 Route::get('orders/{status}', [KitchenController::class, 'ordersByStatus']);
                 Route::post('orders/{id}/advance', [KitchenController::class, 'advanceOrder']);
@@ -203,7 +225,7 @@ $v1Routes = function () {
             });
 
             // Reports
-            Route::prefix('reports')->group(function () {
+            Route::middleware('module:reports_analytics')->prefix('reports')->group(function () {
                 Route::get('sales', [ReportController::class, 'salesReport']);
                 Route::get('vouchers', [ReportController::class, 'voucherReport']);
                 Route::get('tables', [ReportController::class, 'tablePerformance']);
@@ -213,12 +235,14 @@ $v1Routes = function () {
                 Route::get('settlements', [ReportController::class, 'settlementReport']);
 
                 // VAT Reports
-                Route::get('vat/daily', [VatReportController::class, 'dailyZReport']);
-                Route::get('vat/monthly', [VatReportController::class, 'monthlyVatReport']);
+                Route::middleware('module:vat_reports')->group(function () {
+                    Route::get('vat/daily', [VatReportController::class, 'dailyZReport']);
+                    Route::get('vat/monthly', [VatReportController::class, 'monthlyVatReport']);
+                });
             });
 
             // AI Analytics Assistant
-            Route::prefix('ai/analytics')->group(function () {
+            Route::middleware('module:ai_analytics_assistant')->prefix('ai/analytics')->group(function () {
                 Route::post('ask', [AIAnalyticsController::class, 'ask']);
                 Route::get('insights', [AIAnalyticsController::class, 'insights']);
                 Route::get('suggestions', [AIAnalyticsController::class, 'suggestions']);
@@ -229,14 +253,14 @@ $v1Routes = function () {
             });
 
             // AI Sales Forecasting
-            Route::prefix('ai/forecast')->group(function () {
+            Route::middleware('module:ai_sales_forecast')->prefix('ai/forecast')->group(function () {
                 Route::get('/', [SalesForecastController::class, 'forecast']);
                 Route::get('busy-hours', [SalesForecastController::class, 'busyHours']);
                 Route::get('staffing', [SalesForecastController::class, 'staffing']);
             });
 
             // AI Menu Description Generator
-            Route::prefix('ai/description')->group(function () {
+            Route::middleware('module:ai_menu_description')->prefix('ai/description')->group(function () {
                 Route::post('generate', [MenuDescriptionController::class, 'generate']);
                 Route::post('alternatives', [MenuDescriptionController::class, 'alternatives']);
                 Route::post('improve', [MenuDescriptionController::class, 'improve']);
@@ -245,7 +269,7 @@ $v1Routes = function () {
             });
 
             // AI Sentiment Analysis
-            Route::prefix('ai/sentiment')->group(function () {
+            Route::middleware('module:ai_sentiment_analysis')->prefix('ai/sentiment')->group(function () {
                 Route::get('overview', [SentimentController::class, 'overview']);
                 Route::get('trends', [SentimentController::class, 'trends']);
                 Route::get('negative', [SentimentController::class, 'negativeFeedback']);
@@ -253,11 +277,13 @@ $v1Routes = function () {
             });
 
             // Settlements
-            Route::get('settlements', [SettlementController::class, 'index']);
-            Route::get('settlements/{id}', [SettlementController::class, 'show']);
+            Route::middleware('module:settlement_management')->group(function () {
+                Route::get('settlements', [SettlementController::class, 'index']);
+                Route::get('settlements/{id}', [SettlementController::class, 'show']);
+            });
 
             // Users: restaurant admin can manage own tenant's staff/kitchen users
-            Route::middleware('role:restaurant_admin')->group(function () {
+            Route::middleware(['role:restaurant_admin', 'module:user_management'])->group(function () {
                 Route::get('users', [UserController::class, 'index']);
                 Route::post('users', [UserController::class, 'store']);
                 Route::get('users/{id}', [UserController::class, 'show']);
@@ -266,15 +292,11 @@ $v1Routes = function () {
             });
 
             // Restaurant Branding (restaurant admin)
-            Route::middleware('role:restaurant_admin')->prefix('branding')->group(function () {
+            Route::middleware(['role:restaurant_admin', 'module:branding'])->prefix('branding')->group(function () {
                 Route::get('/', [BrandingController::class, 'show']);
                 Route::post('/', [BrandingController::class, 'update']);
             });
 
-            // Subscription status
-            Route::get('subscription/current', [SubscriptionController::class, 'currentSubscription']);
-            Route::post('subscription/pay', [SubscriptionController::class, 'initiatePayment']);
-            Route::post('subscription/callback', [SubscriptionController::class, 'paymentCallback']);
         });
 
         /*
@@ -338,6 +360,27 @@ $v1Routes = function () {
 
             // Subscription Plans
             Route::apiResource('plans', PlanController::class);
+            Route::patch('plans/{id}/toggle', [PlanController::class, 'toggle']);
+
+            // Plan Modules Management
+            Route::prefix('plans/{planId}/modules')->group(function () {
+                Route::get('/', [ModuleController::class, 'getPlanModules']);
+                Route::post('sync', [ModuleController::class, 'syncPlanModules']);
+            });
+
+            // Module Registry Management
+            Route::prefix('modules')->group(function () {
+                Route::get('/', [ModuleController::class, 'index']);
+                Route::patch('{key}/toggle', [ModuleController::class, 'toggle']);
+            });
+
+            // Tenant Module Overrides (per-tenant grants and revokes)
+            Route::prefix('tenants/{tenantId}/modules')->group(function () {
+                Route::get('/', [TenantModuleController::class, 'getTenantModuleMatrix']);
+                Route::post('grant', [TenantModuleController::class, 'grantModule']);
+                Route::post('revoke', [TenantModuleController::class, 'revokeModule']);
+                Route::delete('{moduleKey}', [TenantModuleController::class, 'removeOverride']);
+            });
 
             // Announcements
             Route::apiResource('announcements', AnnouncementController::class);
@@ -350,6 +393,7 @@ $v1Routes = function () {
                 Route::get('queue-stats', [SystemController::class, 'queueStats']);
                 Route::post('retry-failed-jobs', [SystemController::class, 'retryFailedJobs']);
                 Route::post('clear-cache', [SystemController::class, 'clearCache']);
+                Route::post('storage-link', [SystemController::class, 'storageLink']);
                 Route::get('logs', [SystemController::class, 'logs']);
             });
 

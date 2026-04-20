@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useBrandingStore } from '../stores/brandingStore';
-import { authAPI } from '../services/api';
+import { useModuleStore } from '../stores/moduleStore';
+import { authAPI, subscriptionAPI } from '../services/api';
 import PoweredBy from '../components/ui/PoweredBy';
 import AdminAIChat from '../components/ai/AdminAIChat';
 import {
@@ -72,8 +73,20 @@ const getMenuItems = (userRole) => {
     return tenantMenuItems.filter(item => item.roles.includes(userRole));
 };
 
+const MENU_MODULE_MAP = {
+    '/dashboard/pos': 'pos',
+    '/dashboard/vouchers': 'voucher_system',
+    '/dashboard/reports': 'reports_analytics',
+    '/dashboard/settlements': 'settlement_management',
+    '/dashboard/users': 'user_management',
+};
+
 export default function DashboardLayout() {
     const { user, logout, updateUser } = useAuthStore();
+    const hasModule = useModuleStore((s) => s.hasModule);
+    const moduleIsLoaded = useModuleStore((s) => s.isLoaded);
+    const fetchModules = useModuleStore((s) => s.fetchModules);
+    const clearModules = useModuleStore((s) => s.clear);
     const { branding } = useBrandingStore();
     const navigate = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -82,11 +95,13 @@ export default function DashboardLayout() {
     const [profileOpen, setProfileOpen] = useState(false);
     const [trialInfo, setTrialInfo] = useState({ isOnTrial: false, daysRemaining: 0, trialEndsAt: null });
     const [notificationsOpen, setNotificationsOpen] = useState(false);
+    const [graceInfo, setGraceInfo] = useState({ show: false, daysLeft: 0 });
     const profileRef = useRef(null);
     const notificationsRef = useRef(null);
 
     const handleLogout = () => {
         logout();
+        clearModules();
         navigate('/login');
     };
 
@@ -115,6 +130,32 @@ export default function DashboardLayout() {
         }).catch(() => {});
     }, []);
 
+    useEffect(() => {
+        if (!user || user.role === 'super_admin' || moduleIsLoaded) {
+            return;
+        }
+
+        fetchModules();
+    }, [user, moduleIsLoaded, fetchModules]);
+
+    useEffect(() => {
+        const warning = sessionStorage.getItem('subscription_warning');
+
+        if (warning !== 'grace_period' || user?.role === 'super_admin') {
+            return;
+        }
+
+        subscriptionAPI.current()
+            .then((res) => {
+                const payload = res.data?.data || {};
+                if (payload.status === 'grace' && payload.grace_ends_at) {
+                    const days = Math.max(0, Math.ceil((new Date(payload.grace_ends_at) - new Date()) / (1000 * 60 * 60 * 24)));
+                    setGraceInfo({ show: true, daysLeft: days });
+                }
+            })
+            .catch(() => {});
+    }, [user?.role]);
+
     // Listen for fullscreen changes (e.g. user presses Esc)
     useEffect(() => {
         const handler = () => setIsFullscreen(!!document.fullscreenElement);
@@ -136,7 +177,23 @@ export default function DashboardLayout() {
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-    const filteredMenu = getMenuItems(user?.role);
+    const filteredMenu = getMenuItems(user?.role).filter((item) => {
+        if (user?.role === 'super_admin') {
+            return true;
+        }
+
+        const requiredModule = MENU_MODULE_MAP[item.to];
+
+        if (!requiredModule) {
+            return true;
+        }
+
+        if (!moduleIsLoaded) {
+            return false;
+        }
+
+        return hasModule(requiredModule);
+    });
 
     const sidebarWidth = sidebarCollapsed ? 'w-[72px]' : 'w-64';
 
@@ -183,7 +240,7 @@ export default function DashboardLayout() {
                 ))}
 
                 {/* Kitchen Display Link */}
-                {user?.role !== 'super_admin' && (
+                {user?.role !== 'super_admin' && moduleIsLoaded && hasModule('kitchen_display') && (
                     <NavLink
                         to="/kitchen"
                         onClick={() => setSidebarOpen(false)}
@@ -333,6 +390,23 @@ export default function DashboardLayout() {
                 </header>
 
                 {/* Trial Banner — shown to restaurant admins during active trial */}
+                {graceInfo.show && (
+                    <div className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm font-medium bg-amber-500 text-amber-950">
+                        <div className="flex items-center gap-2">
+                            <HiOutlineExclamation className="w-5 h-5 shrink-0" />
+                            <span>
+                                Your subscription expired. You have {graceInfo.daysLeft} day{graceInfo.daysLeft !== 1 ? 's' : ''} left in your grace period.
+                            </span>
+                        </div>
+                        <button
+                            onClick={() => navigate('/dashboard/subscription/renew')}
+                            className="shrink-0 whitespace-nowrap rounded-lg border border-amber-900/20 bg-white/25 px-3 py-1 text-xs font-semibold hover:bg-white/35 transition-colors"
+                        >
+                            Renew now
+                        </button>
+                    </div>
+                )}
+
                 {user?.role === 'restaurant_admin' && trialInfo.isOnTrial && (
                     <div className={`flex items-center justify-between gap-3 px-4 py-2.5 text-sm font-medium ${
                         trialInfo.daysRemaining <= 3

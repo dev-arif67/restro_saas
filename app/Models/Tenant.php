@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\RestaurantTable;
 use App\Models\Settlement;
 use App\Models\Subscription;
+use App\Models\TenantModuleOverride;
 use App\Models\User;
 use App\Models\Voucher;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -101,6 +102,30 @@ class Tenant extends Model
     public function settlements()
     {
         return $this->hasMany(Settlement::class);
+    }
+
+    /**
+     * Get all module overrides for this tenant.
+     */
+    public function moduleOverrides()
+    {
+        return $this->hasMany(TenantModuleOverride::class);
+    }
+
+    /**
+     * Get all granted module overrides for this tenant.
+     */
+    public function grantedModules()
+    {
+        return $this->moduleOverrides()->where('type', 'grant');
+    }
+
+    /**
+     * Get all revoked module overrides for this tenant.
+     */
+    public function revokedModules()
+    {
+        return $this->moduleOverrides()->where('type', 'revoke');
     }
 
     public function invoiceCounter()

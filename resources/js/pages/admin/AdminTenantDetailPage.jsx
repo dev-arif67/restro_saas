@@ -24,11 +24,20 @@ export default function AdminTenantDetailPage() {
     const { setToken, setUser } = useAuthStore();
 
     const [showEmailModal, setShowEmailModal] = useState(false);
+    const [showOverrideModal, setShowOverrideModal] = useState(false);
+    const [overrideAction, setOverrideAction] = useState('grant');
+    const [targetModule, setTargetModule] = useState(null);
     const [emailData, setEmailData] = useState({ subject: '', message: '' });
+    const [overrideData, setOverrideData] = useState({ reason: '', expires_at: '' });
 
     const { data, isLoading, error } = useQuery({
         queryKey: ['admin-tenant-stats', id],
         queryFn: () => adminAPI.tenants.stats(id).then(r => r.data.data),
+    });
+
+    const { data: moduleMatrix, isLoading: moduleLoading } = useQuery({
+        queryKey: ['admin-tenant-modules', id],
+        queryFn: () => adminAPI.tenantModules.matrix(id).then(r => r.data.data),
     });
 
     const impersonateMutation = useMutation({
@@ -68,6 +77,37 @@ export default function AdminTenantDetailPage() {
         },
     });
 
+    const grantMutation = useMutation({
+        mutationFn: (payload) => adminAPI.tenantModules.grant(id, payload),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['admin-tenant-modules', id]);
+            setShowOverrideModal(false);
+            setOverrideData({ reason: '', expires_at: '' });
+            toast.success('Module granted successfully');
+        },
+        onError: (err) => toast.error(err.response?.data?.message || 'Failed to grant module'),
+    });
+
+    const revokeMutation = useMutation({
+        mutationFn: (payload) => adminAPI.tenantModules.revoke(id, payload),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['admin-tenant-modules', id]);
+            setShowOverrideModal(false);
+            setOverrideData({ reason: '', expires_at: '' });
+            toast.success('Module revoked successfully');
+        },
+        onError: (err) => toast.error(err.response?.data?.message || 'Failed to revoke module'),
+    });
+
+    const removeOverrideMutation = useMutation({
+        mutationFn: (moduleKey) => adminAPI.tenantModules.removeOverride(id, moduleKey),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['admin-tenant-modules', id]);
+            toast.success('Override removed');
+        },
+        onError: (err) => toast.error(err.response?.data?.message || 'Failed to remove override'),
+    });
+
     if (isLoading) return <LoadingSpinner />;
     if (error) return <div className="text-red-500">Error loading tenant details</div>;
 
@@ -84,6 +124,53 @@ export default function AdminTenantDetailPage() {
     const handleSendEmail = (e) => {
         e.preventDefault();
         sendEmailMutation.mutate(emailData);
+    };
+
+    const groupedModules = (moduleMatrix?.modules || []).reduce((acc, module) => {
+        const group = module.group || 'other';
+        if (!acc[group]) {
+            acc[group] = [];
+        }
+        acc[group].push(module);
+        return acc;
+    }, {});
+
+    const getModuleStatusBadge = (module) => {
+        if (module.has_access && module.override_type === 'grant') {
+            return <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">Active (Granted)</span>;
+        }
+        if (module.has_access && module.plan_includes) {
+            return <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">Active (Plan)</span>;
+        }
+        if (!module.has_access && module.override_type === 'revoke') {
+            return <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700">Revoked</span>;
+        }
+        return <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700">Not in Plan</span>;
+    };
+
+    const openOverrideModal = (module, action) => {
+        setTargetModule(module);
+        setOverrideAction(action);
+        setShowOverrideModal(true);
+    };
+
+    const handleOverrideSubmit = (e) => {
+        e.preventDefault();
+        if (!targetModule) {
+            return;
+        }
+
+        const payload = {
+            module_key: targetModule.key,
+            reason: overrideData.reason || null,
+            expires_at: overrideAction === 'grant' ? (overrideData.expires_at || null) : null,
+        };
+
+        if (overrideAction === 'grant') {
+            grantMutation.mutate(payload);
+        } else {
+            revokeMutation.mutate(payload);
+        }
     };
 
     return (
@@ -276,6 +363,76 @@ export default function AdminTenantDetailPage() {
                 </div>
             </div>
 
+            {/* Module Access Matrix */}
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                <h3 className="font-semibold text-gray-900 mb-4">
+                    Module Access (Plan: {moduleMatrix?.plan || 'N/A'})
+                </h3>
+
+                {moduleLoading ? (
+                    <LoadingSpinner />
+                ) : (
+                    <div className="space-y-5">
+                        {Object.entries(groupedModules).map(([group, modules]) => (
+                            <div key={group} className="border border-gray-100 rounded-lg p-4">
+                                <h4 className="font-medium text-gray-800 capitalize mb-3">{group.replace('_', ' ')}</h4>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="text-left border-b">
+                                                <th className="pb-2">Module</th>
+                                                <th className="pb-2">Plan</th>
+                                                <th className="pb-2">Override</th>
+                                                <th className="pb-2">Status</th>
+                                                <th className="pb-2">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {modules.map((module) => (
+                                                <tr key={module.key} className="border-b last:border-0">
+                                                    <td className="py-2">
+                                                        <div className="font-medium text-gray-900">{module.label}</div>
+                                                        <div className="text-xs text-gray-500">{module.key}</div>
+                                                    </td>
+                                                    <td className="py-2">{module.plan_includes ? 'Yes' : 'No'}</td>
+                                                    <td className="py-2 capitalize">{module.override_type || '—'}</td>
+                                                    <td className="py-2">{getModuleStatusBadge(module)}</td>
+                                                    <td className="py-2">
+                                                        {module.override_type ? (
+                                                            <button
+                                                                onClick={() => removeOverrideMutation.mutate(module.key)}
+                                                                className="text-sm text-blue-600 hover:underline"
+                                                            >
+                                                                Remove Override
+                                                            </button>
+                                                        ) : module.has_access ? (
+                                                            <button
+                                                                onClick={() => openOverrideModal(module, 'revoke')}
+                                                                disabled={module.is_core}
+                                                                className="text-sm text-red-600 hover:underline disabled:opacity-40"
+                                                            >
+                                                                Revoke
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => openOverrideModal(module, 'grant')}
+                                                                className="text-sm text-green-600 hover:underline"
+                                                            >
+                                                                Grant
+                                                            </button>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
             {/* Send Email Modal */}
             <Modal isOpen={showEmailModal} onClose={() => setShowEmailModal(false)} title="Send Email to Tenant">
                 <form onSubmit={handleSendEmail} className="space-y-4">
@@ -311,6 +468,47 @@ export default function AdminTenantDetailPage() {
                             onClick={() => setShowEmailModal(false)}
                             className="btn-secondary"
                         >
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </Modal>
+
+            <Modal
+                isOpen={showOverrideModal}
+                onClose={() => setShowOverrideModal(false)}
+                title={`${overrideAction === 'grant' ? 'Grant' : 'Revoke'} Module`}
+            >
+                <form onSubmit={handleOverrideSubmit} className="space-y-4">
+                    <div>
+                        <label className="label">Module</label>
+                        <input className="input" value={targetModule?.label || ''} readOnly />
+                    </div>
+                    <div>
+                        <label className="label">Reason</label>
+                        <textarea
+                            className="input min-h-[90px]"
+                            value={overrideData.reason}
+                            onChange={(e) => setOverrideData((prev) => ({ ...prev, reason: e.target.value }))}
+                            placeholder="Optional admin note"
+                        />
+                    </div>
+                    {overrideAction === 'grant' && (
+                        <div>
+                            <label className="label">Expires At (Optional)</label>
+                            <input
+                                type="datetime-local"
+                                className="input"
+                                value={overrideData.expires_at}
+                                onChange={(e) => setOverrideData((prev) => ({ ...prev, expires_at: e.target.value }))}
+                            />
+                        </div>
+                    )}
+                    <div className="flex gap-3">
+                        <button type="submit" className="btn-primary" disabled={grantMutation.isPending || revokeMutation.isPending}>
+                            {grantMutation.isPending || revokeMutation.isPending ? 'Saving...' : overrideAction === 'grant' ? 'Confirm Grant' : 'Confirm Revoke'}
+                        </button>
+                        <button type="button" className="btn-secondary" onClick={() => setShowOverrideModal(false)}>
                             Cancel
                         </button>
                     </div>

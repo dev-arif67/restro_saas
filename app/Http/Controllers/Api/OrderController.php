@@ -10,6 +10,7 @@ use App\Http\Requests\UpdateOrderStatusRequest;
 use App\Models\Order;
 use App\Models\RestaurantTable;
 use App\Models\Tenant;
+use App\Models\User;
 use App\Models\Voucher;
 use App\Services\BillingService;
 use App\Services\SslCommerzService;
@@ -133,6 +134,11 @@ class OrderController extends BaseApiController
                 $responseData['payment_url'] = $paymentUrl;
             }
 
+            if (!empty($order->public_access_token)) {
+                $responseData['access_token'] = $order->public_access_token;
+                $responseData['tracking_url'] = url('/order/' . $order->order_number . '?access_token=' . $order->public_access_token);
+            }
+
             return $this->created($responseData, 'Order placed successfully');
         } catch (\InvalidArgumentException $e) {
             return $this->error($e->getMessage(), 422);
@@ -228,12 +234,9 @@ class OrderController extends BaseApiController
     /**
      * Public endpoint: Get order status by order number (no auth)
      */
-    public function trackOrder(string $orderNumber): JsonResponse
+    public function trackOrder(Request $request, string $orderNumber): JsonResponse
     {
-        $order = Order::withoutGlobalScopes()
-            ->where('order_number', $orderNumber)
-            ->with(['items.menuItem', 'table', 'voucher'])
-            ->first();
+        $order = $this->resolveOrderForPublicOrTenant($request, $orderNumber);
 
         if (!$order) {
             return $this->notFound('Order not found');
@@ -245,19 +248,16 @@ class OrderController extends BaseApiController
     /**
      * Public endpoint: Get full VAT-compliant invoice data for an order
      */
-    public function invoice(string $orderNumber): JsonResponse
+    public function invoice(Request $request, string $orderNumber): JsonResponse
     {
-        $order = Order::withoutGlobalScopes()
-            ->where('order_number', $orderNumber)
-            ->with(['items.menuItem', 'table', 'voucher'])
-            ->first();
+        $order = $this->resolveOrderForPublicOrTenant($request, $orderNumber);
 
         if (!$order) {
             return $this->notFound('Order not found');
         }
 
         // Get tenant/restaurant info for the invoice header
-        $tenant = Tenant::find($order->tenant_id);
+        $tenant = Tenant::withoutGlobalScopes()->find($order->tenant_id);
 
         return $this->success([
             'invoice' => [
@@ -294,6 +294,47 @@ class OrderController extends BaseApiController
                 'paid_at' => $order->paid_at?->toIso8601String(),
             ],
         ]);
+    }
+
+    private function resolveOrderForPublicOrTenant(Request $request, string $orderNumber): ?Order
+    {
+        $order = Order::withoutGlobalScopes()
+            ->where('order_number', $orderNumber)
+            ->with(['items.menuItem', 'table', 'voucher'])
+            ->first();
+
+        if (!$order) {
+            return null;
+        }
+
+        $apiUser = auth('api')->user();
+
+        if ($this->canAccessOrderAsTenantUser($apiUser, $order)) {
+            return $order;
+        }
+
+        $accessToken = (string) $request->query('access_token', $request->input('access_token', ''));
+
+        if ($accessToken !== ''
+            && !empty($order->public_access_token)
+            && hash_equals((string) $order->public_access_token, $accessToken)) {
+            return $order;
+        }
+
+        return null;
+    }
+
+    private function canAccessOrderAsTenantUser(?User $user, Order $order): bool
+    {
+        if (!$user) {
+            return false;
+        }
+
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return (int) $user->tenant_id === (int) $order->tenant_id;
     }
 
     /**

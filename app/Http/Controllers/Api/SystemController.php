@@ -232,6 +232,32 @@ class SystemController extends BaseApiController
     }
 
     /**
+     * Create the public storage symbolic link.
+     */
+    public function storageLink(): JsonResponse
+    {
+        try {
+            $linkPath = public_path('storage');
+
+            if (is_link($linkPath) || file_exists($linkPath)) {
+                return $this->success([
+                    'linked' => false,
+                    'already_exists' => true,
+                ], 'Storage link already exists');
+            }
+
+            Artisan::call('storage:link');
+
+            return $this->success([
+                'linked' => true,
+                'output' => trim(Artisan::output()),
+            ], 'Storage link created successfully');
+        } catch (\Exception $e) {
+            return $this->error('Failed to create storage link: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
      * Get recent log entries.
      */
     public function logs(Request $request): JsonResponse

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { orderAPI } from '../../services/api';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
@@ -24,26 +24,56 @@ function getRecentOrders() {
     } catch { return []; }
 }
 
+function getStoredAccessToken(orderNumber) {
+    try {
+        const orders = JSON.parse(localStorage.getItem('recent_orders') || '[]');
+        const match = orders.find((o) => o.orderNumber === orderNumber && o.accessToken);
+        return match?.accessToken || '';
+    } catch {
+        return '';
+    }
+}
+
 export default function OrderTrackingPage() {
     const { orderNumber } = useParams();
+    const [searchParams] = useSearchParams();
     const [showInvoice, setShowInvoice] = useState(false);
     const [invoiceData, setInvoiceData] = useState(null);
     const [recentOrders, setRecentOrders] = useState([]);
+    const urlAccessToken = searchParams.get('access_token') || '';
+    const accessToken = urlAccessToken || getStoredAccessToken(orderNumber);
 
     useEffect(() => {
         setRecentOrders(getRecentOrders());
     }, []);
 
     const { data, isLoading, refetch } = useQuery({
-        queryKey: ['track-order', orderNumber],
-        queryFn: () => orderAPI.track(orderNumber).then((r) => r.data.data),
+        queryKey: ['track-order', orderNumber, accessToken],
+        queryFn: () => orderAPI.track(orderNumber, accessToken || undefined).then((r) => r.data.data),
         refetchInterval: 5000,
         enabled: !!orderNumber,
     });
 
+    useEffect(() => {
+        if (!orderNumber || !urlAccessToken) return;
+
+        try {
+            const globalKey = 'recent_orders';
+            const globalOrders = JSON.parse(localStorage.getItem(globalKey) || '[]');
+            const globalUpdated = globalOrders.map((order) => (
+                order.orderNumber === orderNumber
+                    ? { ...order, accessToken: urlAccessToken }
+                    : order
+            ));
+            localStorage.setItem(globalKey, JSON.stringify(globalUpdated));
+        } catch {
+            // Ignore storage errors
+        }
+    }, [orderNumber, urlAccessToken]);
+
     const handleViewInvoice = async () => {
         try {
-            const res = await orderAPI.invoice(orderNumber);
+            const res = await orderAPI.invoice(orderNumber, accessToken || undefined);
             setInvoiceData(res.data.data);
             setShowInvoice(true);
         } catch {
@@ -76,7 +106,9 @@ export default function OrderTrackingPage() {
                                 {recentOrders.map((order, i) => (
                                     <Link
                                         key={i}
-                                        to={`/order/${order.orderNumber}`}
+                                        to={order.accessToken
+                                            ? `/order/${order.orderNumber}?access_token=${encodeURIComponent(order.accessToken)}`
+                                            : `/order/${order.orderNumber}`}
                                         className="flex items-center justify-between bg-white p-4 rounded-2xl shadow-sm border border-gray-100 hover:border-blue-200 transition"
                                     >
                                         <div>
@@ -280,7 +312,9 @@ export default function OrderTrackingPage() {
                                 .map((order, i) => (
                                     <Link
                                         key={i}
-                                        to={`/order/${order.orderNumber}`}
+                                        to={order.accessToken
+                                            ? `/order/${order.orderNumber}?access_token=${encodeURIComponent(order.accessToken)}`
+                                            : `/order/${order.orderNumber}`}
                                         className="flex items-center justify-between bg-white p-3 rounded-xl shadow-sm border border-gray-100 text-sm hover:border-blue-200 transition"
                                     >
                                         <span className="font-medium text-gray-700">#{order.orderNumber}</span>

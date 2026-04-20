@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { tableAPI } from '../../services/api';
+import { tableAPI, authAPI } from '../../services/api';
+import { useAuthStore } from '../../stores/authStore';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import StatusBadge from '../../components/ui/StatusBadge';
 import Modal from '../../components/ui/Modal';
+import TableQRCard from '../../components/TableQRCard';
 import toast from 'react-hot-toast';
-import QRCode from 'react-qr-code';
 
 export default function TablesPage() {
     const queryClient = useQueryClient();
@@ -13,10 +14,16 @@ export default function TablesPage() {
     const [showTransfer, setShowTransfer] = useState(false);
     const [showQr, setShowQr] = useState(null);
     const [editing, setEditing] = useState(null);
+    const { user } = useAuthStore();
 
     const { data: tables, isLoading } = useQuery({
         queryKey: ['tables'],
         queryFn: () => tableAPI.list().then((r) => r.data.data),
+    });
+
+    const { data: profileData, isLoading: profileLoading } = useQuery({
+        queryKey: ['profile'],
+        queryFn: () => authAPI.me().then((r) => r.data.data),
     });
 
     const saveMutation = useMutation({
@@ -58,7 +65,7 @@ export default function TablesPage() {
         }
     };
 
-    if (isLoading) return <LoadingSpinner />;
+    if (isLoading || profileLoading) return <LoadingSpinner />;
 
     return (
         <div>
@@ -134,18 +141,14 @@ export default function TablesPage() {
                 </form>
             </Modal>
 
-            {/* QR Modal */}
-            <Modal isOpen={!!showQr} onClose={() => setShowQr(null)} title={`QR Code - ${showQr?.table_number}`}>
-                <div className="text-center py-4">
-                    {showQr?.qrUrl && (
-                        <div className="inline-block p-4 bg-white rounded-lg">
-                            <QRCode value={showQr.qrUrl} size={200} />
-                        </div>
-                    )}
-                    <p className="text-sm text-gray-500 mt-4">Scan to order from {showQr?.table_number}</p>
-                    <p className="text-xs text-gray-400 mt-2 break-all">{showQr?.qrUrl}</p>
-                </div>
-            </Modal>
+            {/* QR Code Card Modal */}
+            <TableQRCard
+                isOpen={!!showQr}
+                onClose={() => setShowQr(null)}
+                table={showQr}
+                tenant={profileData?.tenant}
+                qrUrl={showQr?.qrUrl}
+            />
         </div>
     );
 }

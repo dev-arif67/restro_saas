@@ -101,7 +101,8 @@ class SslCommerzService
     {
         // In sandbox mode, simple validation
         if ($this->sandbox) {
-            return isset($data['status']) && $data['status'] === 'VALID';
+            $status = strtoupper((string) ($data['status'] ?? ''));
+            return in_array($status, ['VALID', 'VALIDATED'], true);
         }
 
         // Production: validate via API
@@ -116,7 +117,8 @@ class SslCommerzService
 
             $result = $response->json();
 
-            return isset($result['status']) && $result['status'] === 'VALID';
+            $status = strtoupper((string) ($result['status'] ?? ''));
+            return in_array($status, ['VALID', 'VALIDATED'], true);
         } catch (\Exception $e) {
             Log::error('SSLCommerz validation failed', ['error' => $e->getMessage()]);
             return false;

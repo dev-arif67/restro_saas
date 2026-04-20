@@ -4,11 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class SubscriptionPlan extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -17,7 +19,6 @@ class SubscriptionPlan extends Model
         'annual_price',
         'trial_days',
         'duration_days',
-        'features',
         'max_users',
         'is_active',
         'sort_order',
@@ -28,7 +29,6 @@ class SubscriptionPlan extends Model
         'annual_price' => 'decimal:2',
         'trial_days' => 'integer',
         'duration_days' => 'integer',
-        'features' => 'array',
         'max_users' => 'integer',
         'is_active' => 'boolean',
         'sort_order' => 'integer',
@@ -40,6 +40,14 @@ class SubscriptionPlan extends Model
     public function subscriptions(): HasMany
     {
         return $this->hasMany(Subscription::class, 'plan_id');
+    }
+
+    /**
+     * Get the modules included in this plan.
+     */
+    public function modules(): BelongsToMany
+    {
+        return $this->belongsToMany(Module::class, 'plan_modules', 'plan_id', 'module_id');
     }
 
     /**

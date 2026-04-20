@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useBrandingStore } from '../../stores/brandingStore';
+import { useModuleStore } from '../../stores/moduleStore';
 import { authAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 
@@ -10,6 +11,8 @@ export default function LoginPage() {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const { setAuth } = useAuthStore();
+    const fetchModules = useModuleStore((s) => s.fetchModules);
+    const clearModules = useModuleStore((s) => s.clear);
     const { branding } = useBrandingStore();
     const navigate = useNavigate();
 
@@ -22,6 +25,12 @@ export default function LoginPage() {
         try {
             const { data } = await authAPI.login({ email, password });
             setAuth(data.user, data.access_token);
+
+            if (data.user.role === 'super_admin') {
+                clearModules();
+            } else {
+                await fetchModules();
+            }
 
             if (data.user.role === 'kitchen') {
                 navigate('/kitchen');

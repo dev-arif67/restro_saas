@@ -214,7 +214,7 @@ test('invoice endpoint returns vat compliant data', function () {
         ],
     );
 
-    $response = $this->getJson("/api/customer/order/{$order->order_number}/invoice");
+    $response = $this->getJson("/api/customer/order/{$order->order_number}/invoice?access_token={$order->public_access_token}");
 
     $response->assertStatus(200)
         ->assertJsonStructure([
@@ -226,4 +226,7 @@ test('invoice endpoint returns vat compliant data', function () {
                 'payment' => ['method', 'status'],
             ],
         ]);
+
+    $this->getJson("/api/customer/order/{$order->order_number}/invoice")
+        ->assertStatus(404);
 });

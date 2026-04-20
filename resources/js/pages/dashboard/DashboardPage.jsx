@@ -1,10 +1,11 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { dashboardAPI } from '../../services/api';
+import { dashboardAPI, subscriptionAPI } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import StatusBadge from '../../components/ui/StatusBadge';
 import ForecastWidget from '../../components/ai/ForecastWidget';
+import SubscriptionStatusCard from '../../components/SubscriptionStatusCard';
 
 export default function DashboardPage() {
     const { user } = useAuthStore();
@@ -13,6 +14,12 @@ export default function DashboardPage() {
         queryKey: ['dashboard'],
         queryFn: () => dashboardAPI.get().then((r) => r.data.data),
         refetchInterval: 30000,
+    });
+
+    const { data: subscriptionData } = useQuery({
+        queryKey: ['subscription-current'],
+        queryFn: () => subscriptionAPI.current().then((r) => r.data.data),
+        enabled: user?.role !== 'super_admin',
     });
 
     if (isLoading) return <LoadingSpinner />;
@@ -100,6 +107,12 @@ export default function DashboardPage() {
             {user?.role === 'restaurant_admin' && (
                 <div className="mt-6">
                     <ForecastWidget />
+                </div>
+            )}
+
+            {user?.role !== 'super_admin' && (
+                <div className="mt-6">
+                    <SubscriptionStatusCard data={subscriptionData} />
                 </div>
             )}
         </div>

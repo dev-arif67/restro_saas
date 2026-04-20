@@ -9,8 +9,8 @@ export default defineConfig({
             registerType: 'autoUpdate',
             includeAssets: ['favicon.ico', 'robots.txt'],
             manifest: {
-                name: 'RestaurantSaaS',
-                short_name: 'RestSaaS',
+                name: 'InfyraSoft Smart Resturant SAAS',
+                short_name: 'Smart Resturant',
                 description: 'Multi-Tenant Restaurant Management Platform',
                 theme_color: '#3B82F6',
                 background_color: '#ffffff',
@@ -32,7 +32,7 @@ export default defineConfig({
         }),
     ],
     root: 'resources/js',
-    base: '/',
+    base: '/build/',
     build: {
         outDir: '../../public/build',
         emptyOutDir: true,

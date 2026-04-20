@@ -19,6 +19,7 @@ class Order extends Model
         'table_id',
         'voucher_id',
         'order_number',
+        'public_access_token',
         'invoice_number',
         'customer_name',
         'customer_phone',
@@ -40,6 +41,10 @@ class Order extends Model
         'paid_at',
         'source',
         'served_by',
+    ];
+
+    protected $hidden = [
+        'public_access_token',
     ];
 
     protected function casts(): array

@@ -59,6 +59,7 @@ export default function SubscriptionsPage() {
         const plan = plans?.find((p) => p.id === parseInt(d.plan_id));
         createMutation.mutate({
             tenant_id: selectedTenant,
+            plan_id: plan?.id,
             plan_type: toSubscriptionType(plan?.slug),
             amount: plan ? parseFloat(plan.price) : parseFloat(d.amount),
             starts_at: d.starts_at,
@@ -102,17 +103,21 @@ export default function SubscriptionsPage() {
                     <thead>
                         <tr className="text-left border-b">
                             <th className="pb-3">Tenant</th><th className="pb-3">Plan</th><th className="pb-3">Amount</th>
-                            <th className="pb-3">Start</th><th className="pb-3">Expires</th><th className="pb-3">Status</th><th className="pb-3"></th>
+                            <th className="pb-3">Start</th><th className="pb-3">Expires</th><th className="pb-3">Grace Ends</th><th className="pb-3">Status</th><th className="pb-3"></th>
                         </tr>
                     </thead>
                     <tbody>
                         {data?.map((s) => (
                             <tr key={s.id} className="border-b last:border-0">
                                 <td className="py-3 font-medium">{s.tenant?.name}</td>
-                                <td className="py-3 capitalize">{s.plan_type}</td>
+                                <td className="py-3 capitalize">
+                                    {s.plan?.name || s.plan_type}
+                                    {s.is_trial && <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-sky-100 text-sky-700">Trial</span>}
+                                </td>
                                 <td className="py-3">৳{s.amount}</td>
                                 <td className="py-3">{new Date(s.starts_at).toLocaleDateString()}</td>
                                 <td className="py-3">{new Date(s.expires_at).toLocaleDateString()}</td>
+                                <td className="py-3">{s.status === 'grace' && s.grace_ends_at ? new Date(s.grace_ends_at).toLocaleDateString() : '-'}</td>
                                 <td className="py-3"><StatusBadge status={s.status} /></td>
                                 <td className="py-3">
                                     <button
@@ -137,8 +142,9 @@ export default function SubscriptionsPage() {
                             <StatusBadge status={s.status} />
                         </div>
                         <div className="flex items-center gap-3 text-sm text-gray-500 mb-2">
-                            <span className="capitalize">{s.plan_type}</span>
+                            <span className="capitalize">{s.plan?.name || s.plan_type}</span>
                             <span className="font-medium text-gray-900">৳{s.amount}</span>
+                            {s.is_trial && <span className="px-2 py-0.5 text-xs rounded-full bg-sky-100 text-sky-700">Trial</span>}
                         </div>
                         <div className="flex items-center justify-between text-xs text-gray-400 pt-2 border-t">
                             <span>Start: {new Date(s.starts_at).toLocaleDateString()}</span>

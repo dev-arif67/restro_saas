@@ -9,7 +9,12 @@ import { HiOutlineTicket, HiOutlineTrash, HiOutlinePencil } from 'react-icons/hi
 export default function AdminPlansPage() {
     const queryClient = useQueryClient();
     const [showModal, setShowModal] = useState(false);
+    const [showModuleModal, setShowModuleModal] = useState(false);
     const [editingPlan, setEditingPlan] = useState(null);
+    const [modulePlan, setModulePlan] = useState(null);
+    const [moduleGroups, setModuleGroups] = useState({});
+    const [selectedModuleKeys, setSelectedModuleKeys] = useState([]);
+    const [moduleLoading, setModuleLoading] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         slug: '',
@@ -56,6 +61,26 @@ export default function AdminPlansPage() {
             toast.success('Plan deleted successfully');
         },
         onError: (err) => toast.error(err.response?.data?.message || 'Failed to delete plan'),
+    });
+
+    const toggleMutation = useMutation({
+        mutationFn: (id) => adminAPI.plans.toggle(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['admin-plans']);
+            toast.success('Plan status updated');
+        },
+        onError: (err) => toast.error(err.response?.data?.message || 'Failed to update plan status'),
+    });
+
+    const syncModulesMutation = useMutation({
+        mutationFn: ({ planId, moduleKeys }) => adminAPI.plans.syncModules(planId, moduleKeys),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['admin-plans']);
+            setShowModuleModal(false);
+            setModulePlan(null);
+            toast.success('Plan modules updated successfully');
+        },
+        onError: (err) => toast.error(err.response?.data?.message || 'Failed to sync plan modules'),
     });
 
     const closeModal = () => {
@@ -123,6 +148,57 @@ export default function AdminPlansPage() {
         setFormData({
             ...formData,
             features: formData.features.filter((_, i) => i !== index),
+        });
+    };
+
+    const openModuleManager = async (plan) => {
+        try {
+            setModuleLoading(true);
+            setModulePlan(plan);
+
+            const res = await adminAPI.plans.modules(plan.id);
+            const groups = res.data?.data?.modules ?? {};
+
+            setModuleGroups(groups);
+
+            const included = [];
+            Object.values(groups).forEach((items) => {
+                (items || []).forEach((item) => {
+                    if (item.included) {
+                        included.push(item.key);
+                    }
+                });
+            });
+
+            setSelectedModuleKeys(included);
+            setShowModuleModal(true);
+        } catch (error) {
+            toast.error(error?.response?.data?.message || 'Failed to load plan modules');
+        } finally {
+            setModuleLoading(false);
+        }
+    };
+
+    const toggleModuleSelection = (moduleKey, isCore) => {
+        if (isCore) {
+            return;
+        }
+
+        setSelectedModuleKeys((prev) => (
+            prev.includes(moduleKey)
+                ? prev.filter((k) => k !== moduleKey)
+                : [...prev, moduleKey]
+        ));
+    };
+
+    const saveModuleConfiguration = () => {
+        if (!modulePlan) {
+            return;
+        }
+
+        syncModulesMutation.mutate({
+            planId: modulePlan.id,
+            moduleKeys: selectedModuleKeys,
         });
     };
 
@@ -216,16 +292,32 @@ export default function AdminPlansPage() {
                                 </span>{' '}
                                 active subscriptions
                             </p>
+                            <p className="text-sm text-gray-500 mt-1">
+                                <span className="font-semibold text-gray-900">{plan.module_count ?? '—'}</span> modules included
+                            </p>
                         </div>
 
                         {/* Actions */}
                         <div className="flex gap-2">
+                            <button
+                                onClick={() => toggleMutation.mutate(plan.id)}
+                                className="btn-secondary text-sm"
+                            >
+                                {plan.is_active ? 'Deactivate' : 'Activate'}
+                            </button>
                             <button
                                 onClick={() => openEdit(plan)}
                                 className="flex-1 btn-secondary flex items-center justify-center gap-2 text-sm"
                             >
                                 <HiOutlinePencil className="w-4 h-4" />
                                 Edit
+                            </button>
+                            <button
+                                onClick={() => openModuleManager(plan)}
+                                className="btn-secondary text-sm"
+                                disabled={moduleLoading}
+                            >
+                                Modules
                             </button>
                             <button
                                 onClick={() => {
@@ -415,6 +507,55 @@ export default function AdminPlansPage() {
                         </button>
                     </div>
                 </form>
+            </Modal>
+
+            <Modal
+                isOpen={showModuleModal}
+                onClose={() => setShowModuleModal(false)}
+                title={`Plan Modules: ${modulePlan?.name || ''}`}
+                size="xl"
+            >
+                <div className="space-y-5">
+                    {Object.entries(moduleGroups).map(([group, modules]) => (
+                        <div key={group} className="border border-gray-200 rounded-xl p-4">
+                            <h4 className="font-semibold text-gray-900 capitalize mb-3">{group.replace('_', ' ')}</h4>
+                            <div className="space-y-2">
+                                {(modules || []).map((module) => {
+                                    const checked = selectedModuleKeys.includes(module.key) || module.is_core;
+
+                                    return (
+                                        <label key={module.key} className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50">
+                                            <input
+                                                type="checkbox"
+                                                checked={checked}
+                                                disabled={module.is_core}
+                                                onChange={() => toggleModuleSelection(module.key, module.is_core)}
+                                                className="mt-1"
+                                            />
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-medium text-gray-900">{module.label}</span>
+                                                    {module.is_core && <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">Core</span>}
+                                                    {!module.is_active && <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full">Platform Disabled</span>}
+                                                </div>
+                                                <p className="text-xs text-gray-500 mt-0.5">{module.description}</p>
+                                            </div>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ))}
+
+                    <div className="flex gap-3 pt-2">
+                        <button className="btn-primary" onClick={saveModuleConfiguration} disabled={syncModulesMutation.isPending}>
+                            {syncModulesMutation.isPending ? 'Saving...' : 'Save Module Configuration'}
+                        </button>
+                        <button className="btn-secondary" onClick={() => setShowModuleModal(false)}>
+                            Cancel
+                        </button>
+                    </div>
+                </div>
             </Modal>
         </div>
     );

@@ -16,8 +16,9 @@ class StoreSubscriptionRequest extends FormRequest
     {
         return [
             'tenant_id' => 'required|exists:tenants,id',
-            'plan_type' => 'required|in:monthly,yearly,custom',
-            'amount' => 'required|numeric|min:0',
+            'plan_id' => 'nullable|exists:subscription_plans,id',
+            'plan_type' => 'nullable|in:monthly,yearly,custom',
+            'amount' => 'nullable|numeric|min:0',
             'payment_method' => 'nullable|string|in:bkash,sslcommerz,manual',
             'payment_ref' => 'nullable|string',
             'transaction_id' => 'nullable|string',

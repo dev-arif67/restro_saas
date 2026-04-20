@@ -18,17 +18,17 @@ import {
 } from 'react-icons/hi';
 
 // Helper: save recent orders to localStorage
-function saveRecentOrder(slug, orderNumber) {
+function saveRecentOrder(slug, orderNumber, accessToken = null) {
     try {
         const key = `recent_orders_${slug}`;
         const orders = JSON.parse(localStorage.getItem(key) || '[]');
-        const entry = { orderNumber, placedAt: new Date().toISOString() };
+        const entry = { orderNumber, placedAt: new Date().toISOString(), accessToken };
         const updated = [entry, ...orders.filter(o => o.orderNumber !== orderNumber)].slice(0, 10);
         localStorage.setItem(key, JSON.stringify(updated));
         // Also save globally
         const globalKey = 'recent_orders';
         const globalOrders = JSON.parse(localStorage.getItem(globalKey) || '[]');
-        const globalEntry = { orderNumber, slug, placedAt: new Date().toISOString() };
+        const globalEntry = { orderNumber, slug, placedAt: new Date().toISOString(), accessToken };
         const globalUpdated = [globalEntry, ...globalOrders.filter(o => o.orderNumber !== orderNumber)].slice(0, 20);
         localStorage.setItem(globalKey, JSON.stringify(globalUpdated));
     } catch { /* ignore */ }
@@ -96,6 +96,7 @@ export default function CustomerCartPage() {
         onSuccess: (res) => {
             const orderData = res.data.data;
             const orderNumber = orderData.order_number;
+            const accessToken = orderData.access_token || null;
 
             // Save customer info for next time
             if (customerName || customerPhone) {
@@ -105,7 +106,7 @@ export default function CustomerCartPage() {
             }
 
             // Save to recent orders
-            saveRecentOrder(slug, orderNumber);
+            saveRecentOrder(slug, orderNumber, accessToken);
 
             clearCart();
 
@@ -118,7 +119,10 @@ export default function CustomerCartPage() {
             }
 
             toast.success('Order placed!');
-            navigate(`/order/${orderNumber}`);
+            const trackingUrl = accessToken
+                ? `/order/${orderNumber}?access_token=${encodeURIComponent(accessToken)}`
+                : `/order/${orderNumber}`;
+            navigate(trackingUrl);
         },
         onError: (err) => toast.error(err.response?.data?.message || 'Order failed'),
     });

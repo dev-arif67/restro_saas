@@ -9,8 +9,10 @@ use App\Models\SubscriptionPlan;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\SslCommerzService;
+use App\Services\SubscriptionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -18,6 +20,10 @@ use Illuminate\Support\Str;
 
 class OnboardingController extends BaseApiController
 {
+    public function __construct(
+        protected SubscriptionService $subscriptionService
+    ) {}
+
     /**
      * Step 1: Setup restaurant (create tenant) for a registered user without a tenant.
      *
@@ -25,7 +31,8 @@ class OnboardingController extends BaseApiController
      */
     public function setupRestaurant(Request $request): JsonResponse
     {
-        $user = auth()->user();
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
 
         if ($user->tenant_id) {
             return $this->error('You already have a restaurant associated with your account.', 422);
@@ -96,7 +103,8 @@ class OnboardingController extends BaseApiController
      */
     public function initiateSubscription(Request $request): JsonResponse
     {
-        $user = auth()->user();
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
 
         if (!$user->tenant_id) {
             return $this->error('Please set up your restaurant first.', 422);
@@ -284,28 +292,22 @@ class OnboardingController extends BaseApiController
      */
     protected function activateSubscription(array $data, string $paymentMethod, string $tranId, ?string $valId = null): Subscription
     {
-        // Expire any existing active subscriptions
-        Subscription::withoutGlobalScopes()
-            ->where('tenant_id', $data['tenant_id'])
-            ->where('status', 'active')
-            ->update(['status' => 'expired']);
+        $tenant = Tenant::findOrFail($data['tenant_id']);
+        $plan = SubscriptionPlan::findOrFail($data['plan_id']);
 
-        $subscription = Subscription::withoutGlobalScopes()->create([
-            'tenant_id' => $data['tenant_id'],
-            'plan_id' => $data['plan_id'],
-            'plan_type' => $data['plan_type'],
-            'amount' => $data['amount'],
-            'payment_method' => $paymentMethod,
-            'payment_ref' => $valId,
-            'transaction_id' => $tranId,
-            'starts_at' => now(),
-            'expires_at' => now()->addDays($data['duration_days']),
-            'status' => 'active',
-            'notes' => 'Self-service onboarding subscription',
-        ]);
-
-        // Activate the tenant
-        Tenant::where('id', $data['tenant_id'])->update(['is_active' => true]);
+        $subscription = $this->subscriptionService->createSubscription(
+            tenant: $tenant,
+            plan: $plan,
+            paymentData: [
+                'amount' => $data['amount'],
+                'payment_method' => $paymentMethod,
+                'payment_ref' => $valId,
+                'transaction_id' => $tranId,
+                'notes' => 'Self-service onboarding subscription',
+            ],
+            isTrial: false,
+            initiatedBy: 'tenant'
+        );
 
         Log::info("Subscription activated for tenant {$data['tenant_id']} via onboarding. Transaction: {$tranId}");
 
@@ -337,7 +339,8 @@ class OnboardingController extends BaseApiController
      */
     public function status(): JsonResponse
     {
-        $user = auth()->user();
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
 
         $status = [
             'has_account' => true,

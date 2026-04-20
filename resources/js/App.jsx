@@ -2,6 +2,8 @@ import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './stores/authStore';
 import LoadingSpinner from './components/ui/LoadingSpinner';
+import { ModuleGate } from './components/ModuleGate';
+import { UpgradePrompt } from './components/UpgradePrompt';
 
 // Layouts
 const DashboardLayout = lazy(() => import('./layouts/DashboardLayout'));
@@ -22,6 +24,7 @@ const ReportsPage = lazy(() => import('./pages/dashboard/ReportsPage'));
 const SettlementsPage = lazy(() => import('./pages/dashboard/SettlementsPage'));
 const UsersPage = lazy(() => import('./pages/dashboard/UsersPage'));
 const SettingsPage = lazy(() => import('./pages/dashboard/SettingsPage'));
+const SubscriptionRenewPage = lazy(() => import('./pages/dashboard/SubscriptionRenewPage'));
 
 // POS
 const POSPage = lazy(() => import('./pages/dashboard/POSPage'));
@@ -102,14 +105,45 @@ export default function App() {
                     <Route path="categories" element={<CategoriesPage />} />
                     <Route path="tables" element={<TablesPage />} />
                     <Route path="orders" element={<OrdersPage />} />
-                    <Route path="vouchers" element={<VouchersPage />} />
-                    <Route path="reports" element={<ReportsPage />} />
-                    <Route path="settlements" element={<SettlementsPage />} />
-                    <Route path="users" element={<UsersPage />} />
+                    <Route
+                        path="vouchers"
+                        element={
+                            <ModuleGate module="voucher_system" fallback={<UpgradePrompt module="voucher_system" />} loading={<LoadingSpinner />}>
+                                <VouchersPage />
+                            </ModuleGate>
+                        }
+                    />
+                    <Route
+                        path="reports"
+                        element={
+                            <ModuleGate module="reports_analytics" fallback={<UpgradePrompt module="reports_analytics" />} loading={<LoadingSpinner />}>
+                                <ReportsPage />
+                            </ModuleGate>
+                        }
+                    />
+                    <Route
+                        path="settlements"
+                        element={
+                            <ModuleGate module="settlement_management" fallback={<UpgradePrompt module="settlement_management" />} loading={<LoadingSpinner />}>
+                                <SettlementsPage />
+                            </ModuleGate>
+                        }
+                    />
+                    <Route
+                        path="users"
+                        element={
+                            <ModuleGate module="user_management" fallback={<UpgradePrompt module="user_management" />} loading={<LoadingSpinner />}>
+                                <UsersPage />
+                            </ModuleGate>
+                        }
+                    />
                     <Route path="settings" element={<SettingsPage />} />
+                    <Route path="subscription/renew" element={<SubscriptionRenewPage />} />
                     <Route path="pos" element={
                         <ProtectedRoute roles={['restaurant_admin', 'staff']}>
-                            <POSPage />
+                            <ModuleGate module="pos" fallback={<UpgradePrompt module="pos" />} loading={<LoadingSpinner />}>
+                                <POSPage />
+                            </ModuleGate>
                         </ProtectedRoute>
                     } />
                     {/* Admin routes */}
@@ -175,7 +209,9 @@ export default function App() {
                     path="/kitchen"
                     element={
                         <ProtectedRoute roles={['kitchen', 'restaurant_admin', 'super_admin']}>
-                            <KitchenDisplayPage />
+                            <ModuleGate module="kitchen_display" fallback={<UpgradePrompt module="kitchen_display" />} loading={<LoadingSpinner />}>
+                                <KitchenDisplayPage />
+                            </ModuleGate>
                         </ProtectedRoute>
                     }
                 />

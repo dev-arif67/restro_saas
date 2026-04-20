@@ -132,7 +132,9 @@ export default function CustomerLayout() {
                                             {recentOrders.slice(0, 5).map((order, i) => (
                                                 <Link
                                                     key={i}
-                                                    to={`/order/${order.orderNumber}`}
+                                                    to={order.accessToken
+                                                        ? `/order/${order.orderNumber}?access_token=${encodeURIComponent(order.accessToken)}`
+                                                        : `/order/${order.orderNumber}`}
                                                     onClick={() => setShowRecentOrders(false)}
                                                     className="flex items-center justify-between px-3 py-2.5 hover:bg-gray-50 transition"
                                                 >
